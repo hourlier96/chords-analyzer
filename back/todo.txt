@@ -1,0 +1,74 @@
+🎭 1. Substitutions harmoniques étendues
+✔️ Déjà fait : substitutions modales (emprunts)
+➕ À ajouter :
+Substitutions diatoniques (voisin de même fonction) :
+
+Exemple : remplacer un ii par un IV, un iii par un I6, etc.
+
+Substitutions tritonique :
+
+Remplacer un V7 par son alter ego à un triton, souvent en jazz.
+
+Ex : G7 → Db7
+
+Substitutions chromatiques (backdoor) :
+
+Ex : G7 → Bb7 (V7 du vi au lieu de V7 du I)
+
+Dominantes secondaires (V/V, V/ii, etc.) :
+
+Tu peux enrichir une progression en intercalant des dominantes secondaires vers des degrés diatoniques.
+
+Exemple : I – V/ii – ii – V – I (C – A7 – Dm – G7 – C)
+
+🧱 2. Extensions et enrichissements
+Ajoute des couleurs à chaque accord :
+
+Septièmes, neuvièmes, treizièmes, altérations (b9, #11, etc.)
+
+Ex : Dm → Dm7 → Dm9 → Dm11
+
+Prends garde à la logique modale : un accord peut avoir une 9 mais pas forcément une 11 si elle crée une tension avec la fondamentale.
+
+🔁 3. Mouvements de basse (bass motion)
+Créer des progressions plus riches par le mouvement de la basse :
+
+Basses chromatiques descendantes ou montantes
+
+C – C/B – Am – Am/G (très courant)
+
+Pédale harmonique (ex : basse qui reste sur une note pendant que les accords changent)
+
+⛓️ 4. Approches et retards d'accords (passing / neighbor chords)
+Accords de passage : intercalés entre deux accords pour lisser la transition.
+
+Souvent chromatiques ou liés par une basse descendante.
+
+Accords voisins : tension temporaire puis retour à l'accord de base.
+
+🧭 5. Modulations temporaires
+Tonicisation locale : court passage qui fait croire à un autre centre tonal
+
+Modulation pivot : passer vers un nouveau mode via un accord commun
+
+Modal interchange multiple : plusieurs emprunts successifs (ex : i – bVII – IV – V)
+
+🎶 6. Cadences alternatives
+Au lieu de la cadence parfaite (ii – V – I), utilise :
+
+Plagal (IV – I) ou double plagal (bVII – IV – I)
+
+Evitées ou suspendues (ex : cadence évitée V – vi)
+
+🛠️ 7. Intégration dans ton outil
+Voici des idées de fonctions à ajouter :
+
+python
+Copier
+Modifier
+generate_secondary_dominants(progression, mode)
+generate_tritone_substitutions(progression)
+add_chromatic_passing_chords(progression)
+enhance_chords_with_extensions(progression)
+Chacune te permettrait de générer une nouvelle version de la progression enrichie, que tu pourrais afficher dans une table avec des étiquettes explicites.
+
