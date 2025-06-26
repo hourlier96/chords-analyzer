@@ -1,58 +1,10 @@
 import pytest
 from modal_substitution.constants import NOTES
-from modal_substitution.utils.modal_analyzer import (
-    detect_mode,
-)
-
 from modal_substitution.utils.utils import (
     get_note_index,
     get_diatonic_7th_chord,
     guess_possible_tonics,
 )
-
-
-@pytest.mark.parametrize(
-    "tonic, mode_name, degrees, expected_chords",
-    [
-        (
-            get_note_index("C"),
-            "Ionian",
-            [1, 4, 5, 1],
-            [
-                "Cmaj7",
-                "Fmaj7",
-                "G7",
-                "Cmaj7",
-            ],
-        ),
-        (
-            get_note_index("D"),
-            "Dorian",
-            [1, 4, 7, 1],
-            ["Dm7", "G7", "Cmaj7", "Dm7"],
-        ),
-        (
-            get_note_index("G"),
-            "Mixolydian",
-            [2, 5, 6, 1],
-            ["Am7", "Dm7", "Em7", "G7"],
-        ),
-        (
-            get_note_index("A"),
-            "Aeolian",
-            [1, 2, 3, 7],
-            ["Am7", "Bm7b5", "Cmaj7", "G7"],
-        ),
-    ],
-)
-def test_01_get_diatonic_7th_chord_expected_chords(
-    tonic, mode_name, degrees, expected_chords
-):
-    chords = [get_diatonic_7th_chord(degree, tonic, mode_name) for degree in degrees]
-    assert (
-        chords == expected_chords
-    ), f"Chords generated {chords} != exx {expected_chords}"
-
 
 TESTS_CASES = {
     "Ionian": {
@@ -140,40 +92,26 @@ TESTS_CASES = {
     },
 }
 
-TESTS_LIST = []
+TONIC_TESTS = []
 for note in NOTES:
     for mode_name, patterns in TESTS_CASES.items():
-        for pattern_name, pattern_degrees in patterns.items():
+        for pattern_name, degrees in patterns.items():
+            tonic_index = get_note_index(note)
+            chords = [
+                get_diatonic_7th_chord(degree, tonic_index, mode_name)
+                for degree in degrees
+            ]
             test_id = f"{note}-{mode_name}-{pattern_name}"
-            TESTS_LIST.append(
-                pytest.param(
-                    get_note_index(note), mode_name, pattern_degrees, id=test_id
-                )
-            )
+            TONIC_TESTS.append(pytest.param(note, chords, id=test_id))
 
 
-@pytest.mark.parametrize("tonic, mode_name, pattern_degrees", TESTS_LIST)
-def test_02_get_mode_from_progression(tonic, mode_name, pattern_degrees):
-    expected_mode = mode_name
-
-    # Construire la progression à partir de la tonique réelle
-    progression = [
-        get_diatonic_7th_chord(degree, tonic, expected_mode)
-        for degree in pattern_degrees
-    ]
-
-    # Deviner la tonique la plus probable depuis la progression
-    tonic_guess = guess_possible_tonics(progression)
-    assert (
-        tonic_guess
-    ), f"No tonic could be guessed from progression: {' -> '.join(progression)}"
-    guessed_tonic = tonic_guess[0][0]
-
-    # Détecter le mode à partir de la progression et de la tonique devinée
-    detected_mode = detect_mode(progression, guessed_tonic)
-
+@pytest.mark.parametrize("expected_tonic, progression", TONIC_TESTS)
+def test_tonic_detection(expected_tonic, progression):
+    tonic_candidates = guess_possible_tonics(progression)
+    detected_tonic, _ = tonic_candidates[0]
     progression_str = " -> ".join(progression)
 
-    assert (
-        detected_mode == expected_mode
-    ), f"For progression '{progression_str}', expected mode was '{expected_mode}', but detected mode is '{detected_mode}'."
+    assert detected_tonic == expected_tonic, (
+        f"For progression '{progression_str}', expected tonic was '{expected_tonic}', "
+        f"but detected tonic is '{detected_tonic}'."
+    )

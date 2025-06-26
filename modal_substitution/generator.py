@@ -1,37 +1,36 @@
 from tabulate import tabulate
-from modal_substitution.utils.modal_analyzer import detect_intelligent_mode
+from modal_substitution.utils.modal_analyzer import detect_mode
 from modal_substitution.constants import MODES_DATA, ROMAN_DEGREES
 from modal_substitution.utils.utils import (
     format_chords_for_table,
     get_diatonic_7th_chord,
     get_note_from_index,
+    get_note_index,
     get_roman_numeral,
+    guess_possible_tonics,
 )
 
 
-def create_modal_substitution_table(base_progression, tonic=None):
+def create_modal_substitution_table(base_progression, verbose=False):
     """
     Analyzes a chord progression, detects its mode,
     and creates a substitution table showing how it would be reinterpreted
     in other modes by borrowing chords of equivalent degrees.
     """
-    if tonic and tonic not in base_progression:
-        print(
-            f"Warning: Tonic '{tonic}' not found in the progression. Using default tonic '{base_progression[0]}'."
-        )
-        tonic = None
-
     if not base_progression or len(base_progression) < 2:
         print("The progression is empty or too short.")
         return
+    print(f"\nAnalyzing progression '{' -> '.join(base_progression)}'")
 
-    print("\nTonic:", tonic if tonic else base_progression[0])
-    print(f"Analyzing progression '{' -> '.join(base_progression)}'")
+    # Detect the most probable tonic
+    tonic_candidates = guess_possible_tonics(base_progression)
+    if tonic_candidates:
+        tonic = tonic_candidates[0][0]
+    detected_tonic_index = get_note_index(tonic)
 
-    # Detect the most probable mode
-    detected_tonic_index, original_mode = detect_intelligent_mode(
-        base_progression, tonic
-    )
+    # Then the mode from the tonic
+    original_mode = detect_mode(base_progression, tonic)
+
     if not original_mode:
         print(
             "No mode detected, can't create substitution table. It seems the progression is not diatonic."
@@ -39,12 +38,9 @@ def create_modal_substitution_table(base_progression, tonic=None):
         return
 
     tonic_name = get_note_from_index(detected_tonic_index)
-
     print(
-        f"Most probable mode : {tonic_name} {original_mode} - {' '.join([get_roman_numeral(chord, detected_tonic_index, original_mode) for chord in base_progression])}"
+        f"{tonic_name} {original_mode} - {' '.join([get_roman_numeral(chord, detected_tonic_index, original_mode) for chord in base_progression])}"
     )
-
-    # Try to find an actual chord that matches the tonic
 
     # Remove tonic chord(s) from substitution candidates
     chords_to_substitute = [c for c in base_progression]
@@ -73,20 +69,18 @@ def create_modal_substitution_table(base_progression, tonic=None):
         except ValueError:
             degrees_to_borrow.append(None)
 
-    # Handle failed parsing
-    if None in degrees_to_borrow:
-        print(
-            "Warning: One or more chords could not be analyzed as clear degrees. The detected mode may be incorrect."
-        )
-        degrees_to_borrow = [d for d in degrees_to_borrow if d is not None]
     # Create the substitution table
     table_data = []
-    headers = [
-        "Mode",
-        "Borrowed Scale (Relative)",
-        f"Borrowed Degrees ({' '.join(original_numerals)})",
-        "Substitution",
-    ]
+    headers = ["Mode", "Substitution"]
+    if verbose:
+        headers.insert(
+            1,
+            "Borrowed Scale (Relative)",
+        )
+        headers.insert(
+            2,
+            f"Borrowed Degrees ({' '.join(original_numerals)})",
+        )
 
     for mode_name, (_, _, interval) in MODES_DATA.items():
         # Transpose the tonic relatively for each mode
@@ -105,10 +99,17 @@ def create_modal_substitution_table(base_progression, tonic=None):
 
         row = [
             mode_label,
-            f"{get_note_from_index(relative_tonic_index)} Major",
-            format_chords_for_table(borrowed_chords),
             format_chords_for_table(new_progression),
         ]
+        if verbose:
+            row.insert(
+                1,
+                f"{get_note_from_index(relative_tonic_index)} Major",
+            )
+            row.insert(
+                2,
+                format_chords_for_table(borrowed_chords),
+            )
         table_data.append(row)
 
     print(tabulate(table_data, headers=headers, tablefmt="grid"))

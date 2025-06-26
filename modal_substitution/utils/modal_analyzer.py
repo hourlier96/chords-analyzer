@@ -1,108 +1,83 @@
-# -*- coding: utf-8 -*-
 from modal_substitution.utils.utils import (
     get_note_index,
     parse_chord,
     is_chord_compatible,
 )
-from modal_substitution.constants import MODES_DATA
+from modal_substitution.constants import MODES_DATA, TYPICAL_PATTERNS
 
 
-def detect_intelligent_mode(progression, tonic=None):
-    """
-    Detects the most probable mode of a chord progression.
-    Optionally biases detection toward a specific tonic if provided.
-    Returns a tuple: (tonic_index, mode_name)
-    """
-    if not progression:
-        return get_note_index("C"), "Ionian"  # Default fallback
-
+def detect_mode(progression, tonic):
+    tonic_idx = get_note_index(tonic)
+    if tonic_idx is None:
+        return None
     prog_parsed = [parse_chord(c) for c in progression]
-    perfect_matches = []
+    if None in prog_parsed:
+        return None
 
-    # Try all combinations of tonic and mode
-    for tonic_idx in range(12):
-        # Order matters for detection in case of ambiguous progressions
-        for mode_name in [
-            "Ionian",
-            "Aeolian",
-            "Dorian",
-            "Mixolydian",
-            "Lydian",
-            "Phrygian",
-            "Locrian",
-        ]:
-            intervals, qualities, _ = MODES_DATA[mode_name]
-            is_a_match = True
-            chord_degrees = []
+    best_mode = None
+    best_score = -float("inf")
 
-            # Compare each chord in the progression with the mode structure
-            for c_idx, c_qual in prog_parsed:
+    for mode_name, (intervals, qualities, _) in MODES_DATA.items():
+        chord_degrees = []
+        compatibility_mask = []
+
+        for c_idx, c_qual in prog_parsed:
+            try:
                 interval = (c_idx - tonic_idx + 12) % 12
-                if interval not in intervals:
-                    is_a_match = False
-                    break
-                degree_index = intervals.index(interval)
-                expected_quality = qualities[degree_index]
-                if not is_chord_compatible(c_qual, expected_quality):
-                    is_a_match = False
-                    break
-                chord_degrees.append(degree_index)
+                degree = intervals.index(interval)
+                chord_degrees.append(degree)
 
-            # If all chords fit the mode, score the match
-            if is_a_match:
-                score = 0
+                expected_quality = qualities[degree]
+                is_compatible = is_chord_compatible(c_qual, expected_quality)
+                compatibility_mask.append(is_compatible)
+            except ValueError:
+                chord_degrees.append(None)
+                compatibility_mask.append(False)
 
-                # Heuristic scoring criteria
-                if chord_degrees and chord_degrees[0] == 0:
-                    score += 3  # Starts on I
+        match_count = sum(compatibility_mask)
+        if match_count < len(progression) / 2:
+            continue
+        penalty_count = len(progression) - match_count
+        score = match_count - (penalty_count * 0.5)
 
-                for i in range(len(chord_degrees) - 1):
-                    if chord_degrees[i] == 4 and chord_degrees[i + 1] == 0:
-                        score += 2  # V → I cadence
+        if chord_degrees and chord_degrees[0] == 0:
+            score += 5
 
-                if chord_degrees and chord_degrees[-1] == 0:
-                    score += 1  # Ends on I
+        total_pattern_score = 0
+        prog_str = " ".join(map(str, [d for d in chord_degrees if d is not None]))
 
-                if 4 in chord_degrees:
-                    score += 0.5  # Presence of V
+        sorted_patterns = sorted(
+            TYPICAL_PATTERNS.get(mode_name, []),
+            key=lambda p: len(p["degrees"]),
+            reverse=True,
+        )
 
-                if prog_parsed[0][0] == tonic_idx:
-                    score += 2  # Root match
+        for pattern in sorted_patterns:
+            pattern_str = " ".join(map(str, pattern["degrees"]))
 
-                if len(chord_degrees) >= 3 and chord_degrees[-3:] == [1, 4, 0]:
-                    score += 5  # ii - V - I
+            try:
+                start_index = prog_str.find(pattern_str)
+                if start_index != -1:
+                    is_pattern_fully_compatible = all(
+                        compatibility_mask[i]
+                        for i in range(
+                            start_index, start_index + len(pattern["degrees"])
+                        )
+                    )
 
-                # Special Mixolydian signature: I7 → IVmaj7 → bVIImaj7
-                if (
-                    len(prog_parsed) >= 3
-                    and chord_degrees[:3] == [0, 3, 6]
-                    and progression[0].endswith("7")
-                    and progression[1].endswith("maj7")
-                    and progression[2].endswith("maj7")
-                ):
-                    score += 5
+                    if is_pattern_fully_compatible:
+                        total_pattern_score += pattern["score"]
+                    else:
+                        total_pattern_score += pattern["score"] * 0.25
 
-                if chord_degrees[0] == 0 and progression[0].endswith("7"):
-                    score += 2  # Tonic is dominant
+                    prog_str = prog_str.replace(pattern_str, "", 1)
+            except Exception:
+                continue
 
-                if chord_degrees[:4] == [0, 5, 1, 4]:
-                    score += 4  # Anatole
+        score += total_pattern_score
 
-                # Record match
-                perfect_matches.append(
-                    {"tonic": tonic_idx, "mode": mode_name, "score": score}
-                )
+        if score > best_score:
+            best_score = score
+            best_mode = mode_name
 
-    if not perfect_matches:
-        return None, None
-
-    # If user specified tonic, prefer it
-    if tonic:
-        tonic_index = get_note_index(tonic)
-        for match in perfect_matches:
-            if match["tonic"] == tonic_index:
-                return match["tonic"], match["mode"]
-
-    # Return the best-scoring match
-    best_match = sorted(perfect_matches, key=lambda m: -m["score"])[0]
-    return best_match["tonic"], best_match["mode"]
+    return best_mode

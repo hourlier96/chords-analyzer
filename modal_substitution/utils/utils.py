@@ -3,6 +3,7 @@ from modal_substitution.constants import (
     NOTES,
     ROMAN_DEGREES,
     CORE_QUALITIES,
+    TYPICAL_PATTERNS,
 )
 
 
@@ -123,6 +124,71 @@ def is_chord_compatible(chord_quality, expected_quality):
     if chord_quality == "d" and expected_quality == "m7b5":
         return True
     return False
+
+
+def guess_possible_tonics(progression):
+    if not progression:
+        return []
+
+    parsed = [parse_chord(c) for c in progression]
+    if None in parsed:
+        return []
+
+    tonic_scores = {}
+
+    for tonic_idx in range(12):
+        best_mode_score = -float("inf")
+
+        for mode_name, (intervals, qualities, _) in MODES_DATA.items():
+
+            match_count = 0
+            penalty_count = 0
+            chord_degrees = []
+
+            for c_idx, c_qual in parsed:
+                try:
+                    interval = (c_idx - tonic_idx + 12) % 12
+                    degree = intervals.index(interval)
+                    chord_degrees.append(degree)
+
+                    expected_quality = qualities[degree]
+                    if is_chord_compatible(c_qual, expected_quality):
+                        match_count += 1
+                    else:
+                        penalty_count += 0.5
+                except ValueError:
+                    penalty_count += 2
+                    chord_degrees.append(None)
+
+            if match_count < len(progression) / 2:
+                continue
+
+            current_score = match_count - penalty_count
+            # Bonus for first chord: major = 5, minor = 2
+            if chord_degrees and chord_degrees[0] == 0:
+                tonic_quality_of_this_mode = qualities[0]
+                if tonic_quality_of_this_mode == "maj":
+                    current_score += 5
+                else:
+                    current_score += 2
+            if chord_degrees and chord_degrees[-1] == 0:
+                current_score += 1
+
+            prog_degrees_str = " ".join(
+                map(str, [d for d in chord_degrees if d is not None])
+            )
+            for pattern in TYPICAL_PATTERNS.get(mode_name, []):
+                pattern_degrees_str = " ".join(map(str, pattern["degrees"]))
+                if pattern_degrees_str in prog_degrees_str:
+                    current_score += pattern["score"]
+
+            if current_score > best_mode_score:
+                best_mode_score = current_score
+
+        tonic_note = get_note_from_index(tonic_idx)
+        tonic_scores[tonic_note] = best_mode_score
+
+    return sorted(tonic_scores.items(), key=lambda x: -x[1])
 
 
 # Formats a list of chord names for display in table columns

@@ -48,7 +48,6 @@ from modal_substitution.utils.utils import get_note_index
             [1, 2, 5, 6],
             ["C#maj7", "D#m7", "G#7", "A#m7"],
         ),
-        # Exemple supplémentaire avec une progression différente
         (
             ["D", "Em", "A", "Bm"],
             "B",
