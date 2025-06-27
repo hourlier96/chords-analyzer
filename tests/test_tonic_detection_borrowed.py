@@ -52,18 +52,17 @@ def test_tonic_with_modal_interchange_subdominant():
     assert detected_tonic == expected_tonic
 
 
-# Doesn't work because of subtility between Dm minor & F major
-# def test_tonic_starting_on_submediant_vi():
-#     """
-#     Teste une progression qui ne commence pas sur la tonique.
-#     Le 'vi-IV-I-V' est très commun. La tonique 'F' apparaît en 3ème position.
-#     """
-#     progression = ["Dm", "Bb", "F", "C"]
-#     expected_tonic = "F"
+def test_tonic_starting_on_submediant_vi():
+    """
+    Teste une progression qui ne commence pas sur la tonique.
+    Le 'vi-IV-I-V' est très commun. La tonique 'F' apparaît en 3ème position.
+    """
+    progression = ["Dm", "Bb", "F", "C"]
+    expected_tonic = "F"
 
-#     tonic_candidates = guess_possible_tonics(progression)
-#     detected_tonic, _ = tonic_candidates[0]
-#     assert detected_tonic == expected_tonic
+    tonic_candidates = guess_possible_tonics(progression)
+    detected_tonic, _ = tonic_candidates[0]
+    assert detected_tonic == expected_tonic
 
 
 def test_tonic_relative_major_minor_ambiguity():

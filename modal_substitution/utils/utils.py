@@ -113,20 +113,39 @@ def get_diatonic_7th_chord(degree, key_tonic_index, mode_name="Ionian"):
     return name + quality
 
 
-# Determines if a chord quality is compatible with the expected diatonic one
-def is_chord_compatible(chord_quality, expected_quality):
-    if chord_quality == expected_quality:
+def is_chord_compatible(found_quality, expected_quality):
+    MAJOR_TRIAD_QUALITIES = ["", "maj", "M"]
+    MINOR_TRIAD_QUALITIES = ["m", "min"]
+    DIMINISHED_TRIAD_QUALITIES = ["dim", "d"]
+
+    if found_quality == expected_quality:
         return True
-    if chord_quality == "M" and expected_quality in ["maj7", "7"]:
+    if (found_quality in MAJOR_TRIAD_QUALITIES and expected_quality == "maj7") or (
+        found_quality == "maj7" and expected_quality in MAJOR_TRIAD_QUALITIES
+    ):
         return True
-    if chord_quality == "m" and expected_quality == "m7":
+    if (found_quality in MINOR_TRIAD_QUALITIES and expected_quality == "m7") or (
+        found_quality == "m7" and expected_quality in MINOR_TRIAD_QUALITIES
+    ):
         return True
-    if chord_quality == "d" and expected_quality == "m7b5":
+    if (found_quality in MAJOR_TRIAD_QUALITIES and expected_quality == "7") or (
+        found_quality == "7" and expected_quality in MAJOR_TRIAD_QUALITIES
+    ):
+        return True
+    if (found_quality in DIMINISHED_TRIAD_QUALITIES and expected_quality == "m7b5") or (
+        found_quality == "m7b5" and expected_quality in DIMINISHED_TRIAD_QUALITIES
+    ):
+        return True
+    if expected_quality in MINOR_TRIAD_QUALITIES and found_quality == "7":
         return True
     return False
 
 
 def guess_possible_tonics(progression):
+    """
+    Devine la ou les toniques les plus probables d'une progression d'accords en utilisant
+    un système de scoring hiérarchique pour une stabilité et une précision maximales.
+    """
     if not progression:
         return []
 
@@ -137,58 +156,82 @@ def guess_possible_tonics(progression):
     tonic_scores = {}
 
     for tonic_idx in range(12):
-        best_mode_score = -float("inf")
+        # Le score pour chaque hypothèse (tonique, mode) est un tuple.
+        # La comparaison se fait élément par élément, dans l'ordre de priorité.
+        # (matches, strong_cadence, anchor, cadence, dominant, pattern)
+        best_score_tuple = (-1, -1, -1, -1, -1, -1)
 
         for mode_name, (intervals, qualities, _) in MODES_DATA.items():
 
-            match_count = 0
-            penalty_count = 0
+            # --- Étape 1: Calcul des degrés et de la compatibilité diatonique ---
             chord_degrees = []
+            compatible_chords_count = 0
 
-            for c_idx, c_qual in parsed:
+            for i in range(len(parsed)):
+                c_idx, c_qual = parsed[i]
                 try:
                     interval = (c_idx - tonic_idx + 12) % 12
                     degree = intervals.index(interval)
                     chord_degrees.append(degree)
 
-                    expected_quality = qualities[degree]
-                    if is_chord_compatible(c_qual, expected_quality):
-                        match_count += 1
-                    else:
-                        penalty_count += 0.5
+                    if is_chord_compatible(c_qual, qualities[degree]):
+                        compatible_chords_count += 1
                 except ValueError:
-                    penalty_count += 2
                     chord_degrees.append(None)
 
-            if match_count < len(progression) / 2:
-                continue
+            # --- Étape 2: Calcul des scores pour la hiérarchie de décision ---
 
-            current_score = match_count - penalty_count
-            # Bonus for first chord: major = 5, minor = 2
-            if chord_degrees and chord_degrees[0] == 0:
-                tonic_quality_of_this_mode = qualities[0]
-                if tonic_quality_of_this_mode == "maj":
-                    current_score += 5
-                else:
-                    current_score += 2
-            if chord_degrees and chord_degrees[-1] == 0:
-                current_score += 1
+            # Critère 1: Nombre de correspondances (le plus important)
+            score_matches = compatible_chords_count
 
-            prog_degrees_str = " ".join(
-                map(str, [d for d in chord_degrees if d is not None])
-            )
+            prog_degrees_list = [d for d in chord_degrees if d is not None]
+
+            # Critère 2: Présence de la cadence "parfaite" ii-V-I (bris d'égalité très fort)
+            is_ii_v_i = prog_degrees_list == [1, 4, 0]
+            score_strong_cadence = 1 if is_ii_v_i else 0
+
+            # Critère 3: Ancrage sur la tonique (commence par I)
+            score_anchor = 1 if chord_degrees and chord_degrees[0] == 0 else 0
+
+            # Critère 4: Présence d'une cadence V-I générique
+            prog_degrees_str = " ".join(map(str, prog_degrees_list))
+            score_cadence = 1 if "4 0" in prog_degrees_str else 0
+
+            # Critère 5: Présence d'une dominante fonctionnelle
+            score_dominant = 0
+            for i, degree in enumerate(chord_degrees):
+                if degree == 4:
+                    _, chord_quality = parsed[i]
+                    if "m" not in chord_quality and "dim" not in chord_quality:
+                        score_dominant = 1
+                        break
+
+            # Critère 6: La progression est un motif connu (bris d'égalité final)
+            score_pattern = 0
             for pattern in TYPICAL_PATTERNS.get(mode_name, []):
-                pattern_degrees_str = " ".join(map(str, pattern["degrees"]))
-                if pattern_degrees_str in prog_degrees_str:
-                    current_score += pattern["score"]
+                if prog_degrees_list == pattern["degrees"]:
+                    score_pattern = 1
+                    break
 
-            if current_score > best_mode_score:
-                best_mode_score = current_score
+            # --- Étape 3: Création du tuple de score hiérarchique ---
+            current_score_tuple = (
+                score_matches,
+                score_strong_cadence,
+                score_anchor,
+                score_cadence,
+                score_dominant,
+                score_pattern,
+            )
+
+            # Python compare les tuples nativement, élément par élément
+            if current_score_tuple > best_score_tuple:
+                best_score_tuple = current_score_tuple
 
         tonic_note = get_note_from_index(tonic_idx)
-        tonic_scores[tonic_note] = best_mode_score
+        tonic_scores[tonic_note] = best_score_tuple
 
-    return sorted(tonic_scores.items(), key=lambda x: -x[1])
+    # Tri final basé sur la comparaison des tuples de score
+    return sorted(tonic_scores.items(), key=lambda x: x[1], reverse=True)
 
 
 # Formats a list of chord names for display in table columns

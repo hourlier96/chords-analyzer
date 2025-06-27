@@ -26,6 +26,7 @@ def create_modal_substitution_table(base_progression, verbose=False):
     tonic_candidates = guess_possible_tonics(base_progression)
     if tonic_candidates:
         tonic = tonic_candidates[0][0]
+    print(tonic_candidates)
     detected_tonic_index = get_note_index(tonic)
 
     # Then the mode from the tonic

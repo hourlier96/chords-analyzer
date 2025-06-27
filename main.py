@@ -10,4 +10,7 @@ if __name__ == "__main__":
     locrian_progression = ["Cdim", "Db", "Ebm"]
     # create_modal_substitution_table(phrygian_progression)
 
-    create_modal_substitution_table(lydian_progression)
+    # create_modal_substitution_table(lydian_progression)
+
+    accords = ["Dm", "A#", "F", "C"]
+    create_modal_substitution_table(accords, verbose=True)
