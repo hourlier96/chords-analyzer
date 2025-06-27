@@ -26,7 +26,7 @@ def create_modal_substitution_table(base_progression, verbose=False):
     tonic_candidates = guess_possible_tonics(base_progression)
     if tonic_candidates:
         tonic = tonic_candidates[0][0]
-    print(tonic_candidates)
+
     detected_tonic_index = get_note_index(tonic)
 
     # Then the mode from the tonic
@@ -39,35 +39,57 @@ def create_modal_substitution_table(base_progression, verbose=False):
         return
 
     tonic_name = get_note_from_index(detected_tonic_index)
-    print(
-        f"{tonic_name} {original_mode} - {' '.join([get_roman_numeral(chord, detected_tonic_index, original_mode) for chord in base_progression])}"
-    )
-
-    # Remove tonic chord(s) from substitution candidates
-    chords_to_substitute = [c for c in base_progression]
-    if not chords_to_substitute:
-        chords_to_substitute = base_progression[1:]  # fallback
-
-    # Get Roman numeral representation of non-tonic chords
-    original_numerals = [
-        get_roman_numeral(c, detected_tonic_index, original_mode)
-        for c in chords_to_substitute
+    full_analysis_tuples = [
+        get_roman_numeral(chord, detected_tonic_index, original_mode)
+        for chord in base_progression
     ]
 
-    # Try to convert numerals to degree numbers (1-7)
+    # 2. On prépare les chaînes de caractères pour l'affichage demandé.
+    # On sépare les degrés attendus et les degrés réels en deux listes distinctes.
+    expected_numerals_list = [result[0] for result in full_analysis_tuples]
+    found_numerals_list = [result[1] for result in full_analysis_tuples]
+
+    # 3. On affiche le résultat dans le format souhaité.
+    print(f"\n--- Analyse pour {tonic_name} {original_mode} ---")
+    print(f"Attendus : {' -> '.join(expected_numerals_list)}")
+    print(f"Réels    : {' -> '.join(found_numerals_list)}")
+
+    # 4. On filtre correctement les accords à substituer (ceux qui ne sont pas la tonique).
+    # Cette logique est maintenant correcte et se base sur le chiffrage attendu.
+    chords_to_substitute = []
+    # On stocke aussi les chiffrages correspondants pour un usage ultérieur
+    original_numerals_tuples = []
+
+    for i, chord in enumerate(base_progression):
+        chords_to_substitute.append(chord)
+        original_numerals_tuples.append(full_analysis_tuples[i])
+
+    # Fallback de sécurité si la progression ne contenait que des accords de tonique
+    if not chords_to_substitute and base_progression:
+        chords_to_substitute = base_progression[1:]
+        original_numerals_tuples = full_analysis_tuples[1:]
+
+    # 5. On convertit les chiffrages en degrés numériques (1-7).
+    # Cette partie fonctionne maintenant avec la liste de tuples.
     degrees_to_borrow = []
-    for numeral in original_numerals:
-        try:
-            numeral_cleaned = (
-                numeral.upper()
-                .replace("MAJ7", "")
-                .replace("M7", "")
-                .replace("Ø7", "")
-                .replace("°7", "")
-                .replace("7", "")
-            )
-            degrees_to_borrow.append(ROMAN_DEGREES.index(numeral_cleaned) + 1)
-        except ValueError:
+    for expected, found in original_numerals_tuples:
+        # On se base sur le chiffrage réel (found) pour la conversion.
+        # On retire les suffixes comme 'maj7', '7', etc. pour ne garder que le chiffre.
+        # Ex: "Vmaj7" -> "V", "vi" -> "vi"
+        import re
+
+        match = re.match(r"^[ivxIVX]+", found)
+        if match:
+            base_numeral_str = match.group(0)
+
+            # On trouve l'index dans la liste ROMAN_DEGREES (en majuscule) et on ajoute 1.
+            try:
+                degree_num = ROMAN_DEGREES.index(base_numeral_str.upper()) + 1
+                degrees_to_borrow.append(degree_num)
+            except ValueError:
+                # Gère le cas où le chiffrage ne serait pas standard
+                continue
+        else:
             degrees_to_borrow.append(None)
 
     # Create the substitution table
@@ -80,7 +102,7 @@ def create_modal_substitution_table(base_progression, verbose=False):
         )
         headers.insert(
             2,
-            f"Borrowed Degrees ({' '.join(original_numerals)})",
+            f"Borrowed Degrees ({' '.join(found_numerals_list)})",
         )
 
     for mode_name, (_, _, interval) in MODES_DATA.items():

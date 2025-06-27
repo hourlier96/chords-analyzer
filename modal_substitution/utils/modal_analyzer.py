@@ -3,13 +3,13 @@ from modal_substitution.utils.utils import (
     parse_chord,
     is_chord_compatible,
 )
-from modal_substitution.constants import CORE_QUALITIES, MODES_DATA, TYPICAL_PATTERNS
+from modal_substitution.constants import CHARACTERISTIC_DEGREES, MODES_DATA
 
 
 def detect_mode(progression, tonic):
     """
-    Détecte le mode le plus probable en utilisant un scoring hiérarchique
-    qui intègre les motifs comme bris d'égalité final.
+    Détecte le mode le plus probable pour une progression et une tonique données,
+    en se basant sur la compatibilité diatonique et le poids des accords caractéristiques.
     """
     tonic_idx = get_note_index(tonic)
     if tonic_idx is None or not progression:
@@ -20,67 +20,39 @@ def detect_mode(progression, tonic):
         return None
 
     best_mode_name = None
-    best_score_tuple = (-1, -1, -1, -1, -1)
+    best_score = -float("inf")
 
     for mode_name, (intervals, qualities, _) in MODES_DATA.items():
 
-        chord_degrees = []
-        compatible_chords_count = 0
+        current_score = 0
 
-        for i in range(len(parsed)):
-            c_idx, c_qual = parsed[i]
+        # On récupère les degrés caractéristiques pour ce mode
+        characteristic_degrees = CHARACTERISTIC_DEGREES.get(mode_name, [])
+
+        for c_idx, c_qual in parsed:
             try:
                 interval = (c_idx - tonic_idx + 12) % 12
                 degree = intervals.index(interval)
-                chord_degrees.append(degree)
 
                 if is_chord_compatible(c_qual, qualities[degree]):
-                    compatible_chords_count += 1
+                    # +1 point pour chaque accord compatible
+                    current_score += 1
+                    # +3 points bonus si c'est un accord caractéristique du mode
+                    if degree in characteristic_degrees:
+                        current_score += 3
+                else:
+                    # -1 point pour une qualité incorrecte
+                    current_score -= 1
             except ValueError:
-                chord_degrees.append(None)
+                # -2 points pour un accord totalement hors gamme
+                current_score -= 2
 
-        # --- Calcul des scores pour la hiérarchie ---
-        # Critère 1: Nombre de correspondances
-        score_matches = compatible_chords_count
+        # Ambiguité totale: préference par défaut
+        if mode_name in ["Ionian", "Aeolian"]:
+            current_score += 0.1
 
-        # Critère 2: Bonus d'ancrage (commence sur la tonique)
-        score_anchor = 1 if chord_degrees and chord_degrees[0] == 0 else 0
-
-        # Critère 3: Bonus de cadence V-I
-        prog_degrees_str = " ".join(
-            map(str, [d for d in chord_degrees if d is not None])
-        )
-        score_cadence = 1 if "4 0" in prog_degrees_str else 0
-
-        # Critère 4: Bonus de dominante fonctionnelle
-        score_dominant = 0
-        for i, degree in enumerate(chord_degrees):
-            if degree == 4:
-                _, chord_quality = parsed[i]
-                # Utilise votre fonction CORE_QUALITIES pour être plus robuste
-                if CORE_QUALITIES.get(chord_quality) == "major":
-                    score_dominant = 1
-                    break
-
-        # Critère 5: Bonus de motif (bris d'égalité final)
-        score_pattern = 0
-        prog_degrees_list = [d for d in chord_degrees if d is not None]
-        for pattern in TYPICAL_PATTERNS.get(mode_name, []):
-            if prog_degrees_list == pattern["degrees"]:
-                score_pattern = 1
-                break
-
-        # Création du tuple de score final
-        current_score_tuple = (
-            score_matches,
-            score_anchor,
-            score_cadence,
-            score_dominant,
-            score_pattern,
-        )
-
-        if current_score_tuple > best_score_tuple:
-            best_score_tuple = current_score_tuple
+        if current_score > best_score:
+            best_score = current_score
             best_mode_name = mode_name
 
     return best_mode_name

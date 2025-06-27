@@ -50,64 +50,44 @@ CORE_QUALITIES = {
 
 TYPICAL_PATTERNS = {
     "Ionian": [
-        {"degrees": [0, 4, 5, 3]},
-        {"degrees": [0, 5, 3, 4]},
-        {"degrees": [0, 5, 1, 4]},
-        {"degrees": [1, 4, 0]},
-        {"degrees": [0, 1, 4, 0]},
-        {"degrees": [0, 1, 5, 4]},
-        {"degrees": [0, 2, 3, 4]},
-        {"degrees": [0, 3, 4, 3]},
-        {"degrees": [0, 1, 4, 5]},
-        {"degrees": [5, 4, 0]},
-        {"degrees": [5, 3, 0, 4]},
-        {"degrees": [0, 4, 5, 2, 3, 0, 3, 4]},
+        {"degrees": [0, 2, 5, 3]},  # I-iii-vi-IV
+        {"degrees": [0, 3, 0, 4]},  # I-IV-I-V
     ],
     "Dorian": [
-        {"degrees": [0, 3, 4]},
-        {"degrees": [0, 6, 3, 4]},
-        {"degrees": [0, 1, 2, 3]},
-        {"degrees": [0, 2, 3, 6]},
-        {"degrees": [0, 4, 0, 3]},
+        {"degrees": [0, 3, 0, 6]},  # i-IV-i-VII
+        {"degrees": [0, 3, 0, 4]},  # i-IV-i-V
+        {"degrees": [0, 3, 4, 6]},  # i-IV-V-VII
+        {"degrees": [0, 3, 5, 4]},  # i-IV-VI-V
     ],
     "Phrygian": [
-        {"degrees": [0, 1, 0, 6]},
-        {"degrees": [0, 6, 5, 4]},
-        {"degrees": [0, 1, 2, 6]},
+        {"degrees": [0, 3, 1, 0]},  # i-iv-ii-i
+        {"degrees": [0, 1, 2, 1]},  # i-ii°-III-I
     ],
     "Lydian": [
-        {"degrees": [0, 1, 5, 2]},
-        {"degrees": [0, 1]},
-        {"degrees": [0, 2, 1, 4]},
-        {"degrees": [0, 1, 4, 0]},
+        {"degrees": [0, 4, 5, 1]},  # I-V-VI-II
+        {"degrees": [0, 3, 1, 4]},  # I-IV-ii-V
+        {"degrees": [0, 1, 2, 5]},  # I-II-III-VI
+        {"degrees": [0, 3, 5, 2]},  # I-IV-VI-III
     ],
     "Mixolydian": [
-        {"degrees": [0, 6, 3, 4]},
-        {"degrees": [0, 3, 4]},
-        {"degrees": [0, 6, 0, 3]},
+        {"degrees": [0, 3, 6]},  # I-IV-VII
+        {"degrees": [0, 3, 0, 4]},  # I-IV-I-V
+        {"degrees": [0, 3, 6, 5]},  # I-IV-bVII-bVI
+        {"degrees": [0, 6, 3, 0]},  # I-bVII-III-I
     ],
     "Aeolian": [
-        {"degrees": [0, 5, 2, 6]},
-        {"degrees": [0, 6, 5, 4]},
-        {"degrees": [0, 3, 4, 0]},
-        {"degrees": [0, 4, 3, 0]},
-        {"degrees": [1, 4, 0]},
-        {"degrees": [0, 2, 5, 6]},
-        {"degrees": [0, 5, 6, 0]},
+        {"degrees": [0, 1, 4]},  # i-ii-v
+        {"degrees": [0, 3, 0, 6]},  # i-iv-i-VII
+        {"degrees": [0, 3, 6, 5]},  # i-iv-bVII-VI
     ],
 }
 
-RELATIVE_PAIRS = {
-    "C": "Am",
-    "G": "Em",
-    "D": "Bm",
-    "A": "F#m",
-    "E": "C#m",
-    "B": "G#m",
-    "F#": "D#m",
-    "C#": "A#m",
-    "F": "Dm",
-    "Bb": "Gm",
-    "Eb": "Cm",
-    "Ab": "Fm",
+CHARACTERISTIC_DEGREES = {
+    # La note qui définit le mode par rapport à son équivalent majeur/mineur
+    "Lydian": [
+        3
+    ],  # Le IV# (degré 3, ex: F# pour C Lydien) n'est pas un accord, on vise le II
+    "Mixolydian": [6],  # Le bVII (degré 6, ex: Bb pour C Mixolydien)
+    "Dorian": [3],  # Le IV majeur (degré 3, ex: F pour C Dorien)
+    "Phrygian": [1],  # Le bII majeur (degré 1, ex: Db pour C Phrygien)
 }

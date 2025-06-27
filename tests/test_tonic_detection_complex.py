@@ -1,6 +1,28 @@
 from modal_substitution.utils.utils import guess_possible_tonics
 
 
+def test_tonic_vi_IV_I_V_is_major():
+    """
+    Teste le cas le plus classique : une progression vi-IV-I-V doit être
+    identifiée comme majeure, et non comme sa relative mineure qui commence par i.
+    """
+    progression = ["Am", "F", "C", "G"]
+    expected_tonic = "C"
+
+    # ... (le reste du code de test)
+    assert guess_possible_tonics(progression)[0][0] == expected_tonic
+
+
+def test_tonic_iii_vi_IV_I_is_major():
+    """
+    Similaire, mais commence sur le iii. Le couple I-V (G-D) doit l'emporter.
+    """
+    progression = ["Bm", "Em", "C", "G"]
+    expected_tonic = "G"
+
+    assert guess_possible_tonics(progression)[0][0] == expected_tonic
+
+
 def test_tonic_aeolian_with_major_dominant():
     """
     Teste la cadence la plus commune en mode mineur : i - V - i.
@@ -128,3 +150,15 @@ def test_tonic_four_chords_of_pop():
     tonic_candidates = guess_possible_tonics(progression)
     detected_tonic, _ = tonic_candidates[0]
     assert detected_tonic == expected_tonic
+
+
+def test_lydian_vs_ionian_ambiguity():
+    """
+    La progression C-D-Em-G est diatonique en C Lydien (I-II-iii-V)
+    ET en G Ionien (IV-V-vi-I). G Ionien doit gagner car la cadence V-I vers G
+    est harmoniquement plus forte.
+    """
+    progression = ["C", "D", "Em", "G"]
+    expected_tonic = "G"
+
+    assert guess_possible_tonics(progression)[0][0] == expected_tonic

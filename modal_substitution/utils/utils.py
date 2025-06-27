@@ -73,39 +73,73 @@ def parse_chord(chord_name):
     return root_index, "M"  # Default: major triad
 
 
-# Converts a chord name into its Roman numeral in a given mode and tonic
+def _format_roman_numeral_from_quality(base_numeral, quality, core_qualities_map):
+    """
+    Fonction aide : met en forme un chiffrage romain (ex: 'V') et une qualité ('m7')
+    en une chaîne de caractères finale (ex: 'v7').
+    """
+    display_numeral = base_numeral
+    core_quality = core_qualities_map.get(quality, "major")  # "major" par défaut
+    if core_quality in ["minor", "diminished"]:
+        display_numeral = display_numeral.lower()
+
+    suffix_map = {
+        "maj7": "maj7",
+        "m7": "7",
+        "7": "7",
+        "m7b5": "ø7",
+        "dim7": "°7",
+        "dim": "°",
+    }
+    suffix = suffix_map.get(quality, "")
+
+    return display_numeral + suffix
+
+
 def get_roman_numeral(chord_name, tonic_index, mode_name):
-    chord_index, chord_quality = parse_chord(chord_name)
+    """
+    Analyse un accord et retourne un tuple contenant le chiffrage attendu (diatonique)
+    et le chiffrage réel (joué).
+    """
+    parsed_chord = parse_chord(chord_name)
+    if not parsed_chord:
+        return (f"({chord_name})", f"({chord_name})")
+
+    chord_index, found_quality = parsed_chord
     interval = (chord_index - tonic_index + 12) % 12
 
     mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
 
-    if interval in mode_intervals:
-        degree_index = mode_intervals.index(interval)
-        base_numeral = ROMAN_DEGREES[degree_index]
+    if interval not in mode_intervals:
+        return (f"({chord_name})", f"({chord_name})")
 
-        # Lowercase for minor or diminished chords
-        if CORE_QUALITIES.get(mode_qualities[degree_index]) in ["minor", "diminished"]:
-            base_numeral = base_numeral.lower()
+    degree_index = mode_intervals.index(interval)
+    base_numeral = ROMAN_DEGREES[degree_index]
 
-        # Add suffix for 7th chords
-        quality_map = {
-            "maj7": "maj7",
-            "m7": "m7",
-            "7": "7",
-            "m7b5": "ø7",
-            "dim7": "°7",
-        }
-        suffix = quality_map.get(chord_quality, "")
-        return base_numeral + suffix
+    expected_quality = mode_qualities[degree_index]
 
-    # If chord doesn't belong to the mode, return it in parentheses
-    return f"({chord_name})"
+    expected_numeral = _format_roman_numeral_from_quality(
+        base_numeral, expected_quality, CORE_QUALITIES
+    )
+
+    found_numeral = _format_roman_numeral_from_quality(
+        base_numeral, found_quality, CORE_QUALITIES
+    )
+
+    return (expected_numeral, found_numeral)
 
 
 # Returns a diatonic 7th chord for a degree and tonic, with optional simplification
 def get_diatonic_7th_chord(degree, key_tonic_index, mode_name="Ionian"):
+    """
+    Génère un accord de septième diatonique à partir d'un degré, d'une tonique et d'un mode.
+    Cette version est robuste et gère les degrés invalides.
+    """
+    if degree is None or not (1 <= degree <= 7):
+        return None
+
     mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
+
     chord_root_index = (key_tonic_index + mode_intervals[degree - 1]) % 12
     quality = mode_qualities[degree - 1]
     name = get_note_from_index(chord_root_index)
@@ -141,11 +175,75 @@ def is_chord_compatible(found_quality, expected_quality):
     return False
 
 
+def _get_degrees_for_hypothesis(parsed_progression, tonic_idx, mode_intervals):
+    try:
+        return [
+            mode_intervals.index((c[0] - tonic_idx + 12) % 12)
+            for c in parsed_progression
+        ]
+    except ValueError:
+        return None
+
+
+def guess_by_exact_pattern(parsed, modes_data, typical_patterns):
+    for tonic_idx in range(12):
+        for mode_name, (intervals, qualities, _) in modes_data.items():
+            degrees = _get_degrees_for_hypothesis(parsed, tonic_idx, intervals)
+            if degrees is None:
+                continue
+
+            for pattern in typical_patterns.get(mode_name, []):
+                if degrees == pattern["degrees"]:
+                    is_fully_compatible = all(
+                        is_chord_compatible(parsed[i][1], qualities[degree])
+                        for i, degree in enumerate(degrees)
+                    )
+                    if is_fully_compatible:
+                        tonic_note = get_note_from_index(tonic_idx)
+                        return [(tonic_note, 100)]
+    return None
+
+
+def guess_by_harmonic_weight(parsed, modes_data):
+    tonic_scores = {}
+    for tonic_idx in range(12):
+        hypotheses = {"Ionian": modes_data["Ionian"], "Aeolian": modes_data["Aeolian"]}
+        best_score = -float("inf")
+
+        for mode_name, (intervals, qualities, _) in hypotheses.items():
+            score = 0
+            for c_idx, c_qual in parsed:
+                try:
+                    interval = (c_idx - tonic_idx + 12) % 12
+                    degree = intervals.index(interval)
+                    if not is_chord_compatible(c_qual, qualities[degree]):
+                        score -= 2
+                        continue
+
+                    if degree == 0:
+                        score += 3  # Tonic
+                    elif degree == 4:  # Dominant
+                        if "m" not in c_qual and "dim" not in c_qual:
+                            score += 2
+                    elif degree == 3:
+                        score += 1  # Sub-dominant
+                    else:
+                        score += 0.5
+
+                except ValueError:
+                    score -= 2
+
+            if score > best_score:
+                best_score = score
+
+        tonic_note = get_note_from_index(tonic_idx)
+        tonic_scores[tonic_note] = best_score
+
+    return sorted(tonic_scores.items(), key=lambda x: x[1], reverse=True)
+
+
 def guess_possible_tonics(progression):
-    """
-    Devine la ou les toniques les plus probables d'une progression d'accords en utilisant
-    un système de scoring hiérarchique pour une stabilité et une précision maximales.
-    """
+    """Fonction principale qui orchestre les deux stratégies."""
     if not progression:
         return []
 
@@ -153,85 +251,11 @@ def guess_possible_tonics(progression):
     if None in parsed:
         return []
 
-    tonic_scores = {}
+    pattern_guess = guess_by_exact_pattern(parsed, MODES_DATA, TYPICAL_PATTERNS)
+    if pattern_guess:
+        return pattern_guess
 
-    for tonic_idx in range(12):
-        # Le score pour chaque hypothèse (tonique, mode) est un tuple.
-        # La comparaison se fait élément par élément, dans l'ordre de priorité.
-        # (matches, strong_cadence, anchor, cadence, dominant, pattern)
-        best_score_tuple = (-1, -1, -1, -1, -1, -1)
-
-        for mode_name, (intervals, qualities, _) in MODES_DATA.items():
-
-            # --- Étape 1: Calcul des degrés et de la compatibilité diatonique ---
-            chord_degrees = []
-            compatible_chords_count = 0
-
-            for i in range(len(parsed)):
-                c_idx, c_qual = parsed[i]
-                try:
-                    interval = (c_idx - tonic_idx + 12) % 12
-                    degree = intervals.index(interval)
-                    chord_degrees.append(degree)
-
-                    if is_chord_compatible(c_qual, qualities[degree]):
-                        compatible_chords_count += 1
-                except ValueError:
-                    chord_degrees.append(None)
-
-            # --- Étape 2: Calcul des scores pour la hiérarchie de décision ---
-
-            # Critère 1: Nombre de correspondances (le plus important)
-            score_matches = compatible_chords_count
-
-            prog_degrees_list = [d for d in chord_degrees if d is not None]
-
-            # Critère 2: Présence de la cadence "parfaite" ii-V-I (bris d'égalité très fort)
-            is_ii_v_i = prog_degrees_list == [1, 4, 0]
-            score_strong_cadence = 1 if is_ii_v_i else 0
-
-            # Critère 3: Ancrage sur la tonique (commence par I)
-            score_anchor = 1 if chord_degrees and chord_degrees[0] == 0 else 0
-
-            # Critère 4: Présence d'une cadence V-I générique
-            prog_degrees_str = " ".join(map(str, prog_degrees_list))
-            score_cadence = 1 if "4 0" in prog_degrees_str else 0
-
-            # Critère 5: Présence d'une dominante fonctionnelle
-            score_dominant = 0
-            for i, degree in enumerate(chord_degrees):
-                if degree == 4:
-                    _, chord_quality = parsed[i]
-                    if "m" not in chord_quality and "dim" not in chord_quality:
-                        score_dominant = 1
-                        break
-
-            # Critère 6: La progression est un motif connu (bris d'égalité final)
-            score_pattern = 0
-            for pattern in TYPICAL_PATTERNS.get(mode_name, []):
-                if prog_degrees_list == pattern["degrees"]:
-                    score_pattern = 1
-                    break
-
-            # --- Étape 3: Création du tuple de score hiérarchique ---
-            current_score_tuple = (
-                score_matches,
-                score_strong_cadence,
-                score_anchor,
-                score_cadence,
-                score_dominant,
-                score_pattern,
-            )
-
-            # Python compare les tuples nativement, élément par élément
-            if current_score_tuple > best_score_tuple:
-                best_score_tuple = current_score_tuple
-
-        tonic_note = get_note_from_index(tonic_idx)
-        tonic_scores[tonic_note] = best_score_tuple
-
-    # Tri final basé sur la comparaison des tuples de score
-    return sorted(tonic_scores.items(), key=lambda x: x[1], reverse=True)
+    return guess_by_harmonic_weight(parsed, MODES_DATA)
 
 
 # Formats a list of chord names for display in table columns
@@ -240,5 +264,5 @@ def format_chords_for_table(chords, width=7):
         chords_list = chords.split(" - ")
     else:
         chords_list = chords
-    formatted = [f"{chord:<{width}}" for chord in chords_list]
+    formatted = [f"{chord if chord else '?':<{width}}" for chord in chords_list]
     return " ".join(formatted)
