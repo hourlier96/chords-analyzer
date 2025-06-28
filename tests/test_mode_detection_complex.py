@@ -1,9 +1,4 @@
-# Fichier: tests/test_mode_detection_borrowed.py
-# -*- coding: utf-8 -*-
-
-# Assurez-vous que les imports pointent vers vos fonctions
-from modal_substitution.utils.utils import guess_possible_tonics
-from modal_substitution.utils.modal_analyzer import detect_mode
+from utils.mode_detection import detect_mode, guess_possible_tonics
 
 
 def test_mode_for_vi_IV_I_V_is_ionian():

@@ -1,14 +1,11 @@
 import pytest
-from modal_substitution.constants import TYPICAL_PATTERNS
-from modal_substitution.utils.modal_analyzer import (
-    detect_mode,
-)
+from constants import TYPICAL_PATTERNS
 
-from modal_substitution.utils.utils import (
+from utils.common import (
     get_note_index,
     get_diatonic_7th_chord,
-    guess_possible_tonics,
 )
+from utils.mode_detection import detect_mode, guess_possible_tonics
 
 
 @pytest.mark.parametrize(

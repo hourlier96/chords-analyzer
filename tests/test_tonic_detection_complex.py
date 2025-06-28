@@ -1,4 +1,4 @@
-from modal_substitution.utils.utils import guess_possible_tonics
+from utils.mode_detection import guess_possible_tonics
 
 
 def test_tonic_vi_IV_I_V_is_major():

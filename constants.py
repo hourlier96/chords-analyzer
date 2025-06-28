@@ -83,11 +83,8 @@ TYPICAL_PATTERNS = {
 }
 
 CHARACTERISTIC_DEGREES = {
-    # La note qui définit le mode par rapport à son équivalent majeur/mineur
-    "Lydian": [
-        3
-    ],  # Le IV# (degré 3, ex: F# pour C Lydien) n'est pas un accord, on vise le II
-    "Mixolydian": [6],  # Le bVII (degré 6, ex: Bb pour C Mixolydien)
-    "Dorian": [3],  # Le IV majeur (degré 3, ex: F pour C Dorien)
-    "Phrygian": [1],  # Le bII majeur (degré 1, ex: Db pour C Phrygien)
+    "Lydian": [3],
+    "Mixolydian": [6],
+    "Dorian": [3],
+    "Phrygian": [1],
 }

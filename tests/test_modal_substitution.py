@@ -1,6 +1,6 @@
 import pytest
 from modal_substitution.generator import get_substitutions
-from modal_substitution.utils.utils import get_note_index
+from utils.common import get_note_index
 
 
 @pytest.mark.parametrize(
