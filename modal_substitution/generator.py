@@ -7,7 +7,11 @@ from utils.common import (
     get_note_index,
     get_roman_numeral,
 )
-from utils.mode_detection import detect_mode, guess_possible_tonics
+from utils.mode_detection import (
+    detect_mode,
+    find_possible_modes_for_chord,
+    guess_possible_tonics,
+)
 
 
 def create_modal_substitution_table(base_progression, verbose=False):
@@ -37,12 +41,25 @@ def create_modal_substitution_table(base_progression, verbose=False):
         for chord in base_progression
     ]
 
-    expected_numerals_list = [result[0] for result in full_analysis_tuples]
-    found_numerals_list = [result[1] for result in full_analysis_tuples]
+    expected_numerals = [result[0] for result in full_analysis_tuples]
+    found_numerals = [result[1] for result in full_analysis_tuples]
 
     print(f"\n--- {tonic_name} {original_mode} ---")
-    print(f"Attendus : {' -> '.join(expected_numerals_list)}")
-    print(f"Réels    : {' -> '.join(found_numerals_list)}")
+    print(f"Attendus : {' -> '.join(expected_numerals)}")
+    print(f"Réels    : {' -> '.join(found_numerals)}")
+
+    print()
+    has_borrowed_chords = False
+    for i, numeral in enumerate(found_numerals):
+        if "(" in numeral or "[" in numeral and "V7" not in numeral:
+            borrowed_chord = base_progression[i]
+            possible_modes = find_possible_modes_for_chord(borrowed_chord, tonic_name)
+            if possible_modes:
+                has_borrowed_chords = True
+                modes_str = ", ".join(possible_modes)
+                print(f"-> '{borrowed_chord}' derived from {tonic_name} {modes_str}.")
+    if has_borrowed_chords:
+        print()
 
     chords_to_substitute = []
     original_numerals_tuples = []
@@ -80,7 +97,7 @@ def create_modal_substitution_table(base_progression, verbose=False):
         )
         headers.insert(
             2,
-            f"Borrowed Degrees ({' '.join(found_numerals_list)})",
+            "Borrowed Degrees",
         )
 
     for mode_name, (_, _, interval) in MODES_DATA.items():
@@ -99,7 +116,7 @@ def create_modal_substitution_table(base_progression, verbose=False):
         )
 
         row = [
-            mode_label,
+            f"{tonic_name} {mode_label}",
             format_chords_for_table(new_progression),
         ]
         if verbose:
@@ -118,67 +135,68 @@ def create_modal_substitution_table(base_progression, verbose=False):
 
 def create_modal_harmonization_table(progression):
     """
-    Analyse une progression d'accords, détecte sa tonalité, et génère une table
-    de réharmonisation par échange modal parallèle.
+    Analyse une progression d'accords et génère une analyse complète, incluant
+    un diagnostic des emprunts et une table de réharmonisation par échange modal.
     """
-    if not progression or len(progression) < 1:
+    if not progression or not any(progression):
         print("La progression est vide.")
         return
 
     print(f"\nAnalyzing progression '{' -> '.join(progression)}'")
 
-    # 1. Détection de la tonique et du mode
     tonic_candidates = guess_possible_tonics(progression)
-    if not tonic_candidates:
-        print("Erreur : Impossible de déterminer une tonique probable.")
-        return
-
     tonic_name = tonic_candidates[0][0]
     tonic_index = get_note_index(tonic_name)
-    original_mode = detect_mode(progression, tonic_name)
+    original_mode = detect_mode(progression, tonic_name) or "Ionian"
 
-    # 2. Analyse en chiffres romains
     analysis_tuples = [
         get_roman_numeral(chord, tonic_index, original_mode) for chord in progression
     ]
     expected_numerals = [r[0] for r in analysis_tuples]
     found_numerals = [r[1] for r in analysis_tuples]
 
-    print(f"\n{tonic_name} {original_mode}")
-    print(f"Supposed : {' -> '.join(expected_numerals)}")
-    print(f"Actual   : {' -> '.join(found_numerals)}")
+    print(f"\n--- Analyse : {tonic_name} {original_mode} ---")
+    print(f"Expected : {' -> '.join(expected_numerals)}")
+    print(f"Found     : {' -> '.join(found_numerals)}")
 
-    # 3. Conversion des chiffres romains en degrés numériques pour la substitution
+    print()
+    has_borrowed_chords = False
+    for i, numeral in enumerate(found_numerals):
+        if "(" in numeral or "[" in numeral and "V7" not in numeral:
+            borrowed_chord = progression[i]
+            possible_modes = find_possible_modes_for_chord(borrowed_chord, tonic_name)
+            if possible_modes:
+                has_borrowed_chords = True
+                modes_str = ", ".join(possible_modes)
+                print(f"-> '{borrowed_chord}' derived from {tonic_name} {modes_str}.")
+    if has_borrowed_chords:
+        print()
+
     degrees_to_borrow = []
     for numeral in found_numerals:
-        clean_numeral = re.sub(r"[()°b#]", "", numeral)
+        clean_numeral = re.sub(r"[()°b#\[\]]", "", numeral).split("/")[0]
         match = re.match(r"^[ivxIVX]+", clean_numeral)
         if match:
             try:
-                degree_num = ROMAN_DEGREES.index(match.group(0).upper()) + 1
-                degrees_to_borrow.append(degree_num)
+                degrees_to_borrow.append(
+                    ROMAN_DEGREES.index(match.group(0).upper()) + 1
+                )
             except ValueError:
                 degrees_to_borrow.append(None)
         else:
             degrees_to_borrow.append(None)
 
-    # 4. Création de la table de substitution
     table_data = []
-    headers = ["Source Mode", "Harmonization"]
-
+    headers = ["Mode", "Harmonization"]
     for mode_name in MODES_DATA:
-        # Pour chaque mode, on génère la séquence d'accords correspondante
         harmonized_chords = [
             get_diatonic_7th_chord(deg, tonic_index, mode_name)
             for deg in degrees_to_borrow
         ]
-
-        mode_label = f"{mode_name}"
-        if mode_name == original_mode:
-            mode_label += " (Original)"
-
-        row = [f"{tonic_name} {mode_label}", format_chords_for_table(harmonized_chords)]
-        table_data.append(row)
+        mode_label = f"{mode_name}" + (
+            " (Original)" if mode_name == original_mode else ""
+        )
+        table_data.append([mode_label, format_chords_for_table(harmonized_chords)])
 
     print(tabulate(table_data, headers=headers, tablefmt="grid"))
 
