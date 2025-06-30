@@ -1,0 +1,5 @@
+tabulate
+pytest
+ruff
+fastapi
+google-generativeai
