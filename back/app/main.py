@@ -58,7 +58,10 @@ def get_all_substitutions(request: ProgressionRequest):
         # mode = detect_mode(progression, tonic)
 
         # Find tonic with IA
-        tonic, mode, explanations = detect_tonic_and_mode(progression)
+        # tonic, mode, explanations = detect_tonic_and_mode(progression)
+        tonic = "C"
+        mode = "Mixolydian"
+        explanations = "balbla"
         detected_tonic_index = get_note_index(tonic)
 
         # Find "foreign" chords from detected mode

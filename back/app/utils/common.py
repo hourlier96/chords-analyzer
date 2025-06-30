@@ -248,6 +248,10 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
     base_numeral = ROMAN_DEGREES[degree_index]
     expected_quality = mode_qualities[degree_index]
 
+    expected_root_index = (tonic_index + mode_intervals[degree_index]) % 12
+    expected_root_name = get_note_from_index(expected_root_index)
+    expected_chord_name = expected_root_name + expected_quality
+
     expected_numeral = _format_numeral(base_numeral, expected_quality)
     found_numeral = _format_numeral(base_numeral, found_quality)
 
@@ -258,6 +262,7 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
         "expected_numeral": expected_numeral,
         "found_quality": found_quality,
         "expected_quality": expected_quality,
+        "expected_chord_name": expected_chord_name,
         "is_diatonic": is_chord_compatible(found_quality, expected_quality),
     }
 

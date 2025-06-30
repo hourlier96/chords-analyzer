@@ -15,6 +15,22 @@ const QUALITIES = [
   { value: "aug", text: "Augmenté (+)" },
 ];
 
+const CORE_QUALITIES = {
+  maj7: "major",
+  M: "major",
+  "": "major",
+  maj: "major",
+  7: "major",
+  m7: "minor",
+  m: "minor",
+  min: "minor",
+  m7b5: "diminished",
+  dim7: "diminished",
+  d: "diminished",
+  dim: "diminished",
+  aug: "augmented",
+};
+
 // --- 2. État réactif de l'application ---
 
 const analysisStore = useAnalysisStore();
@@ -30,6 +46,8 @@ const progression = ref(
     ? analysisStore.lastAnalysis.progression
     : defaultProgression
 );
+
+const flippedCards = ref(new Set());
 
 let nextChordId =
   progression.value.length > 0
@@ -87,23 +105,29 @@ function shouldShowExpected(analysisItem) {
   const { found_quality, expected_quality, found_numeral, expected_numeral } =
     analysisItem;
 
-  // Si les chiffrages finaux sont identiques, on n'affiche rien.
-  if (found_numeral === expected_numeral) {
-    return false;
-  }
+  if (found_numeral === expected_numeral) return false;
 
-  // Qualités considérées comme des triades simples (sans 7e, etc.)
+  if (expected_numeral == "N/A") return false;
+
+  const core_found = CORE_QUALITIES[found_quality];
+  const core_expected = CORE_QUALITIES[expected_quality];
+  if (core_found !== core_expected) return true;
+
   const TRIAD_QUALITIES = ["", "maj", "M", "m", "min"];
-
-  // Si la qualité jouée est une simple triade, on considère que la différence
-  // n'est pas assez importante pour être affichée (selon votre règle).
   if (TRIAD_QUALITIES.includes(found_quality)) {
     return false;
   }
 
-  // Dans tous les autres cas (ex: 7 vs maj7, m7 vs m7b5), la différence est
-  // significative et on veut afficher l'attendu.
+  // Règle 4 (par défaut): Pour toute autre différence (ex: 7 vs maj7), on l'affiche.
   return true;
+}
+
+function toggleCardFlip(index) {
+  if (flippedCards.value.has(index)) {
+    flippedCards.value.delete(index); // Si elle est retournée, on la remet à l'endroit
+  } else {
+    flippedCards.value.add(index); // Sinon, on la retourne
+  }
 }
 
 function toggleExplanation() {
@@ -219,33 +243,64 @@ async function analyzeProgression() {
             v-if="analysisResults.quality_analysis"
             class="detailed-analysis-container"
           >
-            <h4>Analyse détaillée des degrés</h4>
             <div class="analysis-grid">
               <div
                 v-for="(item, index) in analysisResults.quality_analysis"
                 :key="index"
-                class="analysis-card"
-                :class="{ 'non-diatonic': item.found_numeral.includes('(') }"
+                class="analysis-card-container"
               >
-                <div class="chord-name">{{ item.chord }}</div>
-                <div class="found-numeral">{{ item.found_numeral }}</div>
-
-                <div v-if="shouldShowExpected(item)" class="expected-numeral">
-                  (Attendu: {{ item.expected_numeral }})
-                </div>
-
                 <div
-                  v-if="
-                    analysisResults.borrowed_chords &&
-                    analysisResults.borrowed_chords[item.chord]
-                  "
-                  class="borrowed-info"
+                  class="card-inner"
+                  :class="{ 'is-flipped': flippedCards.has(index) }"
                 >
-                  <hr />
-                  Emprunt de :<br />
-                  <em>{{
-                    analysisResults.borrowed_chords[item.chord].join(", ")
-                  }}</em>
+                  <div class="analysis-card card-front">
+                    <div class="card-content">
+                      <div class="chord-name">{{ item.chord }}</div>
+                      <div
+                        :class="{ foreign_chord: !item.is_diatonic }"
+                        class="found-numeral"
+                      >
+                        {{ item.found_numeral }}
+                      </div>
+                      <div
+                        v-if="
+                          analysisResults.borrowed_chords &&
+                          analysisResults.borrowed_chords[item.chord]
+                        "
+                        class="borrowed-info"
+                      >
+                        <em
+                          >Emprunt de :
+                          {{
+                            analysisResults.borrowed_chords[item.chord].join(
+                              ", "
+                            )
+                          }}</em
+                        >
+                      </div>
+                    </div>
+                    <button
+                      v-if="shouldShowExpected(item)"
+                      class="flip-button"
+                      @click="toggleCardFlip(index)"
+                    >
+                      &#x21BA;
+                    </button>
+                  </div>
+
+                  <div class="analysis-card card-back">
+                    <div class="card-content">
+                      <div class="expected-chord-name">
+                        {{ item.expected_chord_name }}
+                      </div>
+                      <div class="expected-numeral">
+                        {{ item.expected_numeral }}
+                      </div>
+                    </div>
+                    <button class="flip-button" @click="toggleCardFlip(index)">
+                      &#x21BA;
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -692,16 +747,11 @@ h3 {
   transition: all 0.2s;
 }
 
-/* On met en évidence les cartes des accords non-diatoniques */
-.analysis-card.non-diatonic {
-  border-color: #ff9800; /* Orange pour attirer l'attention */
+.analysis-card .chord-name {
+  font-size: 1.8rem;
 }
 
-.analysis-card .chord-name {
-  font-weight: bold;
-  font-size: 1.2rem;
-  color: #fff;
-}
+/* On met en évidence les cartes des accords non-diatoniques */
 
 .analysis-card .found-numeral {
   font-family: "Courier New", Courier, monospace;
@@ -711,21 +761,98 @@ h3 {
   margin: 0.5rem 0;
 }
 
+.analysis-card .foreign_chord {
+  color: rgb(255, 95, 95) !important;
+}
+
 .analysis-card .expected-numeral {
-  font-size: 0.8rem;
-  font-style: italic;
-  color: #ccc;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #a0cfff;
+  margin: 0.5rem 0;
 }
 
 .analysis-card .borrowed-info {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #666;
   font-size: 0.8rem;
-  color: #ddd;
 }
 
 .analysis-card .borrowed-info em {
   color: #fdcb6e;
+}
+.analysis-card-container {
+  background-color: transparent;
+  min-width: 140px;
+  height: 180px;
+  perspective: 1000px; /* Crée l'espace 3D */
+  flex: 1;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.6s; /* La durée de l'animation */
+  transform-style: preserve-3d; /* Permet la 3D */
+}
+
+/* Applique la rotation quand la classe .is-flipped est présente */
+.analysis-card-container .is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* Le .analysis-card est maintenant un panneau. On retire sa bordure */
+.analysis-card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden; /* Cache le dos du panneau quand il est retourné */
+  border: 2px solid #555;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* Positionnement et rotation du verso */
+.card-back {
+  background-color: #3d5a80; /* Une couleur différente pour le verso */
+  border-color: #98c1d9;
+  transform: rotateY(180deg);
+}
+
+.card-back-title {
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #e0fbfc;
+}
+
+.expected-chord-name {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: green;
+  margin: 0.5rem 0;
+}
+
+.flip-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.flip-button:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>

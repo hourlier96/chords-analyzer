@@ -1,6 +1,8 @@
 import os
 import google.generativeai as genai
 
+from constants import MODES_DATA
+
 
 def detect_tonic_and_mode(progression: list[str]) -> tuple[str, str, str]:
     """
@@ -16,7 +18,6 @@ def detect_tonic_and_mode(progression: list[str]) -> tuple[str, str, str]:
         )
 
     # --- Initialisation du modèle ---
-    # On utilise gemini-1.5-flash, qui est rapide, puissant et économique.
     model = genai.GenerativeModel("gemini-2.5-flash")
 
     # --- Création du prompt ---
@@ -26,6 +27,7 @@ def detect_tonic_and_mode(progression: list[str]) -> tuple[str, str, str]:
         "Si tu dois choisir parmi plusieurs possibilités, retiens celle qui contient le moins d'accords d'emprunts."
         "L'explication doit être la plus concise possible, assez courte. Termine ta réponse par la tonique et le mode sur une nouvelle ligne, formatés comme suit : 'TONIQUE MODE'.\n"
         "La tonique doit systématiquement être renvoyé sous sa forme lettrée."
+        f"Listes des modes acceptés: {', '.join(MODES_DATA.keys())}"
         "Exemple de sortie :\n"
         "Explication...\n"
         "C Ionian\n\n"
