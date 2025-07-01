@@ -116,7 +116,7 @@ const QUALITIES = [
   {
     label: "Accords Diminués",
     options: [
-      { value: "m7b5", text: "Demi-diminué (ø7)" },
+      { value: "m7b5", text: "Demi-diminué (m7b5)" },
       { value: "dim", text: "Diminué (triade)" },
       { value: "dim7", text: "Diminué 7 (o7)" },
     ],

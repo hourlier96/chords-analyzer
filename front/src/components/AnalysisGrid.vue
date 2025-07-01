@@ -35,7 +35,6 @@
               {{ secondaryDominantsMap.get(item.chord) }}
             </div>
             <div class="arrow-symbol">→</div>
-            <div class="sd-label">V / {{ item.found_numeral }}</div>
           </div>
         </div>
 
@@ -149,7 +148,7 @@ const CORE_QUALITIES = {
   13: "dominant",
 
   // Diminués
-  m7b5: "diminished", // demi-diminué (ø7)
+  m7b5: "diminished", // demi-diminué (øm7b5)
   dim: "diminished", // triade diminuée
   dim7: "diminished", // diminué 7 (o7)
   d: "diminished", // raccourci informel

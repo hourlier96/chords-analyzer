@@ -113,18 +113,34 @@ def get_diatonic_7th_chord(degree, key_tonic_index, mode_name="Ionian"):
 
 
 def is_chord_compatible(found_quality, expected_quality):
+    """
+    Vérifie si la qualité d'accord trouvée est compatible avec celle attendue
+    dans le contexte diatonique. (Version corrigée et finale)
+    """
+    # 1. Cas de la triade majeure ("") : compatible seulement si l'accord attendu
+    #    est de nature majeure ET non-altéré.
+    if found_quality == "":
+        is_major_core = _get_core_quality(expected_quality) == "major"
+        # On vérifie que la qualité attendue ne contient pas d'altérations communes.
+        has_no_alterations = (
+            all(c not in expected_quality for c in "#b")
+            and "sus" not in expected_quality
+        )
+        return is_major_core and has_no_alterations
+
+    # 2. Les qualités de base doivent correspondre pour les autres accords.
     found_core = _get_core_quality(found_quality)
     expected_core = _get_core_quality(expected_quality)
+    if found_core != expected_core:
+        return False
 
-    if found_core == expected_core:
+    # 3. L'accord trouvé ne doit pas avoir d'altérations que l'accord attendu n'a pas.
+    #    Cette logique est la plus fiable pour comparer les extensions.
+    if expected_quality.startswith(found_quality):
         return True
 
-    # Gestion spécifique (exemple)
-    if found_core == "major" and expected_core == "major":
-        return True
-    if found_core == "minor" and expected_core == "minor":
-        return True
-    if found_core == "diminished" and expected_core == "diminished":
+    # 4. Cas particulier pour la triade mineure ('m') vs. l'accord de 7e mineure ('m7').
+    if expected_quality == "m7" and found_quality == "m":
         return True
 
     return False
