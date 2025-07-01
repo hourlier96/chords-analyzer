@@ -42,11 +42,20 @@
           isLoading || progression.length === 0 || isProgressionUnchanged
         "
       >
-        {{ isLoading ? "Analyse en cours..." : "Analyser la Progression" }}
+        <template v-if="isLoading">
+          <v-progress-circular
+            indeterminate
+            size="20"
+            width="2"
+            color="primary"
+            class="mr-2"
+          ></v-progress-circular>
+          Analyse en cours...
+        </template>
+        <template v-else> Analyser la Progression </template>
       </button>
     </div>
 
-    <div v-if="isLoading" class="loading-message">Analyse en cours...</div>
     <div v-if="error" class="error-message">{{ error }}</div>
   </div>
 </template>
@@ -184,6 +193,7 @@ function addChord() {
   };
   // Met à jour la progression en ajoutant le nouvel accord.
   progression.value = [...progression.value, newChord];
+  startEditing(newChord);
 }
 
 // Supprime un accord en fonction de son ID.

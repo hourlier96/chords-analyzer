@@ -57,7 +57,7 @@ def parse_chord(chord_name):
 
     for quality in KNOWN_QUALITIES:
         if chord_name.endswith(quality):
-            root = chord_name[: -len(quality)] or quality
+            root = chord_name[: -len(quality)] if len(quality) > 0 else chord_name
             try:
                 root_index = get_note_index(root)
                 return root_index, quality
@@ -113,37 +113,33 @@ def get_diatonic_7th_chord(degree, key_tonic_index, mode_name="Ionian"):
 
 
 def is_chord_compatible(found_quality, expected_quality):
-    MAJOR_TRIAD_QUALITIES = ["", "maj", "M"]
-    MINOR_TRIAD_QUALITIES = ["m", "min"]
-    DIMINISHED_TRIAD_QUALITIES = ["dim", "d"]
+    found_core = _get_core_quality(found_quality)
+    expected_core = _get_core_quality(expected_quality)
 
-    if found_quality == expected_quality:
+    if found_core == expected_core:
         return True
-    if (found_quality in MAJOR_TRIAD_QUALITIES and expected_quality == "maj7") or (
-        found_quality == "maj7" and expected_quality in MAJOR_TRIAD_QUALITIES
-    ):
+
+    # Gestion spécifique (exemple)
+    if found_core == "major" and expected_core == "major":
         return True
-    if (found_quality in MINOR_TRIAD_QUALITIES and expected_quality == "m7") or (
-        found_quality == "m7" and expected_quality in MINOR_TRIAD_QUALITIES
-    ):
+    if found_core == "minor" and expected_core == "minor":
         return True
-    if (found_quality in MAJOR_TRIAD_QUALITIES and expected_quality == "7") or (
-        found_quality == "7" and expected_quality in MAJOR_TRIAD_QUALITIES
-    ):
+    if found_core == "diminished" and expected_core == "diminished":
         return True
-    if (found_quality in DIMINISHED_TRIAD_QUALITIES and expected_quality == "m7b5") or (
-        found_quality == "m7b5" and expected_quality in DIMINISHED_TRIAD_QUALITIES
-    ):
-        return True
-    if expected_quality in MINOR_TRIAD_QUALITIES and found_quality == "7":
-        return True
+
     return False
 
 
-def _get_core_quality(quality_str):
-    """Extrait la qualité de base ('maj', 'm', 'dim') d'une qualité complète."""
-    if "dim" in quality_str or "°" in quality_str or "b5" in quality_str:
-        return "dim"
-    if "m" in quality_str:
-        return "m"
-    return "maj"
+def _get_core_quality(quality):
+    if quality in CORE_QUALITIES:
+        return CORE_QUALITIES[quality]
+    # Cas non reconnu : essayer de simplifier
+    if quality.startswith("maj"):
+        return "major"
+    if quality.startswith("m"):
+        return "minor"
+    if quality.startswith("dim") or quality.startswith("d"):
+        return "diminished"
+    if quality.startswith("aug"):
+        return "augmented"
+    return "major"  # fallback
