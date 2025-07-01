@@ -2,9 +2,71 @@ from app.utils.common import (
     _get_core_quality,
     get_note_from_index,
     get_note_index,
-    get_roman_numeral,
+    is_chord_compatible,
     parse_chord,
 )
+from constants import CORE_QUALITIES, MODES_DATA, ROMAN_DEGREES
+
+
+def _format_roman_numeral_from_quality(base_numeral, quality, core_qualities_map):
+    """
+    Fonction aide : met en forme un chiffrage romain (ex: 'V') et une qualité ('m7')
+    en une chaîne de caractères finale (ex: 'v7').
+    """
+    display_numeral = base_numeral
+    core_quality = core_qualities_map.get(quality, "major")  # "major" par défaut
+    if core_quality in ["minor", "diminished"]:
+        display_numeral = display_numeral.lower()
+
+    suffix_map = {
+        "maj7": "maj7",
+        "m7": "7",
+        "7": "7",
+        "m7b5": "ø7",
+        "dim7": "°7",
+        "dim": "°",
+    }
+    suffix = suffix_map.get(quality, "")
+
+    return display_numeral + suffix
+
+
+def get_roman_numeral(chord_name, tonic_index, mode_name):
+    """
+    Analyse un accord et retourne un tuple contenant le chiffrage attendu (diatonique)
+    et le chiffrage réel (joué).
+    """
+    parsed_chord = parse_chord(chord_name)
+    if not parsed_chord:
+        return (f"({chord_name})", f"({chord_name})")
+
+    chord_index, found_quality = parsed_chord
+    interval = (chord_index - tonic_index + 12) % 12
+
+    mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
+
+    if interval not in mode_intervals:
+        return (f"({chord_name})", f"({chord_name})")
+
+    degree_index = mode_intervals.index(interval)
+    base_numeral = ROMAN_DEGREES[degree_index]
+
+    expected_quality = mode_qualities[degree_index]
+
+    expected_numeral = _format_roman_numeral_from_quality(
+        base_numeral, expected_quality, CORE_QUALITIES
+    )
+
+    found_numeral = _format_roman_numeral_from_quality(
+        base_numeral, found_quality, CORE_QUALITIES
+    )
+
+    is_borrowed = not is_chord_compatible(found_quality, expected_quality)
+    found_numeral = found_numeral if not is_borrowed else f"({found_numeral})"
+    return (
+        expected_numeral,
+        found_numeral,
+    )
 
 
 def get_secondary_dominant_for_target(target_chord_name, tonic_name, mode_name):

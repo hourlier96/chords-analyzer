@@ -18,19 +18,27 @@ def detect_tonic_and_mode(progression: list[str]) -> tuple[str, str, str]:
         )
 
     # --- Initialisation du modèle ---
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-pro")
 
     # --- Création du prompt ---
     # Le prompt est modifié pour demander des explications détaillées avant la tonique et le mode.
     prompt = (
-        "Tu es un expert en théorie musicale. Ton rôle est d'analyser une progression d'accords et de déterminer sa tonalité la plus probable (tonique et mode).\n"
-        "Si tu dois choisir parmi plusieurs possibilités, retiens celle qui contient le moins d'accords d'emprunts."
-        "L'explication doit être la plus concise possible, assez courte. Termine ta réponse par la tonique et le mode sur une nouvelle ligne, formatés comme suit : 'TONIQUE MODE'.\n"
-        "La tonique doit systématiquement être renvoyé sous sa forme lettrée."
-        f"Listes des modes acceptés: {', '.join(MODES_DATA.keys())}"
-        "Exemple de sortie :\n"
-        "Explication...\n"
-        "C Ionian\n\n"
+        "# Rôle et Objectif"
+        "Tu es un assistant IA expert en théorie musicale. Ton objectif principal est d'identifier la tonalité (tonique et mode) la plus probable d'une progression d'accords donnée."
+        " "
+        "# Instructions et Contraintes Strictes"
+        "1.  **Analyse Logique :** Applique le principe de parcimonie. La tonalité la plus probable est celle qui explique la progression avec le minimum d'accords d'emprunt ou d'altérations chromatiques."
+        "2.  **Explication :** Fournis une explication brève et technique (1 à 2 phrases maximum) justifiant ton choix. Mentionne les degrés clés (ex: I, V, IV) ou les mouvements cadentiels (ex: V-I) qui confirment la tonalité."
+        "3.  **Format de Sortie :** La dernière ligne de ta réponse doit **impérativement et uniquement** contenir la tonalité finale, formatée comme suit : `TONIQUE MODE`."
+        "4.  **Nomenclature de la Tonique :** La tonique doit toujours être représentée par sa notation lettrée (A, B, C, D, E, F, G), incluant les altérations si nécessaire (ex: Bb, F#)."
+        f"5.  **Modes Valides :** Le mode doit **obligatoirement** appartenir à la liste suivante (la casse est très importante): {MODES_DATA.keys()}."
+        " "
+        "# Processus d'Analyse Suggéré"
+        "1.  **Identifier les accords :** Note la nature de chaque accord (majeur, mineur, diminué, etc.)."
+        "2.  **Hypothèses de Tonalité :** Pour chaque accord majeur ou mineur de la progression, considère-le comme une tonique potentielle (degré I)."
+        "3.  **Chiffrage et Validation :** Pour chaque hypothèse, chiffre la progression en degrés romains. Compte combien d'accords sont diatoniques (naturels à la gamme) par rapport aux accords non diatoniques (emprunts)."
+        "4.  **Sélection Finale :** Choisis l'hypothèse qui rend le plus grand nombre d'accords diatoniques."
+        "---"
         f"Progression à analyser : {' - '.join(progression)}"
     )
 

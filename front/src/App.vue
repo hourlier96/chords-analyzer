@@ -124,11 +124,11 @@ async function analyzeProgression() {
             :analysis-results="analysisResults"
           />
 
-          <!-- <h3 v-if="analysisResults.substitutions">
+          <h3 v-if="analysisResults.major_modes_substitutions">
             Table de Substitutions Modales :
           </h3>
           <table
-            v-if="analysisResults.substitutions"
+            v-if="analysisResults.major_modes_substitutions"
             class="substitutions-table"
           >
             <thead>
@@ -140,7 +140,9 @@ async function analyzeProgression() {
             </thead>
             <tbody>
               <tr
-                v-for="(data, modeName) in analysisResults.substitutions"
+                v-for="(
+                  data, modeName
+                ) in analysisResults.major_modes_substitutions"
                 :key="modeName"
               >
                 <td>
@@ -201,7 +203,7 @@ async function analyzeProgression() {
                 </td>
               </tr>
             </tbody>
-          </table> -->
+          </table>
         </div>
       </div>
 

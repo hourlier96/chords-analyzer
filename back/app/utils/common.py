@@ -1,7 +1,6 @@
 from constants import (
     MODES_DATA,
     NOTES,
-    ROMAN_DEGREES,
     CORE_QUALITIES,
 )
 
@@ -51,86 +50,26 @@ def get_note_from_index(index):
 
 # Parses a chord name and returns its root index and a normalized quality string
 def parse_chord(chord_name):
-    chord_name_c = chord_name.strip()
-    root_index = get_note_index(chord_name_c)
+    chord_name = chord_name.strip()
 
-    # Match common 7th chord types
-    if "maj7" in chord_name_c or "M7" in chord_name_c:
-        return root_index, "maj7"
-    if "m7b5" in chord_name_c or "ø" in chord_name_c:
-        return root_index, "m7b5"
-    if "dim7" in chord_name_c or "°7" in chord_name_c:
-        return root_index, "dim7"
-    if "m7" in chord_name_c:
-        return root_index, "m7"
-    if "7" in chord_name_c:
-        return root_index, "7"
-    if "dim" in chord_name_c or "°" in chord_name_c:
-        return root_index, "d"
-    if "m" in chord_name_c:
-        return root_index, "m"
-    return root_index, "M"  # Default: major triad
+    # Utilisation des qualités reconnues depuis CORE_QUALITIES
+    KNOWN_QUALITIES = sorted(CORE_QUALITIES.keys(), key=lambda q: -len(q))
 
+    for quality in KNOWN_QUALITIES:
+        if chord_name.endswith(quality):
+            root = chord_name[: -len(quality)] or quality
+            try:
+                root_index = get_note_index(root)
+                return root_index, quality
+            except ValueError:
+                return None
 
-def _format_roman_numeral_from_quality(base_numeral, quality, core_qualities_map):
-    """
-    Fonction aide : met en forme un chiffrage romain (ex: 'V') et une qualité ('m7')
-    en une chaîne de caractères finale (ex: 'v7').
-    """
-    display_numeral = base_numeral
-    core_quality = core_qualities_map.get(quality, "major")  # "major" par défaut
-    if core_quality in ["minor", "diminished"]:
-        display_numeral = display_numeral.lower()
-
-    suffix_map = {
-        "maj7": "maj7",
-        "m7": "7",
-        "7": "7",
-        "m7b5": "ø7",
-        "dim7": "°7",
-        "dim": "°",
-    }
-    suffix = suffix_map.get(quality, "")
-
-    return display_numeral + suffix
-
-
-def get_roman_numeral(chord_name, tonic_index, mode_name):
-    """
-    Analyse un accord et retourne un tuple contenant le chiffrage attendu (diatonique)
-    et le chiffrage réel (joué).
-    """
-    parsed_chord = parse_chord(chord_name)
-    if not parsed_chord:
-        return (f"({chord_name})", f"({chord_name})")
-
-    chord_index, found_quality = parsed_chord
-    interval = (chord_index - tonic_index + 12) % 12
-
-    mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
-
-    if interval not in mode_intervals:
-        return (f"({chord_name})", f"({chord_name})")
-
-    degree_index = mode_intervals.index(interval)
-    base_numeral = ROMAN_DEGREES[degree_index]
-
-    expected_quality = mode_qualities[degree_index]
-
-    expected_numeral = _format_roman_numeral_from_quality(
-        base_numeral, expected_quality, CORE_QUALITIES
-    )
-
-    found_numeral = _format_roman_numeral_from_quality(
-        base_numeral, found_quality, CORE_QUALITIES
-    )
-
-    is_borrowed = not is_chord_compatible(found_quality, expected_quality)
-    found_numeral = found_numeral if not is_borrowed else f"({found_numeral})"
-    return (
-        expected_numeral,
-        found_numeral,
-    )
+    # Si aucun suffixe ne matche, on tente un accord majeur simple
+    try:
+        root_index = get_note_index(chord_name)
+        return root_index, ""
+    except ValueError:
+        return None
 
 
 def is_dominant_chord(chord_name, parsed_chord=None):
@@ -199,72 +138,6 @@ def is_chord_compatible(found_quality, expected_quality):
     if expected_quality in MINOR_TRIAD_QUALITIES and found_quality == "7":
         return True
     return False
-
-
-def analyze_chord_in_context(chord_name, tonic_index, mode_name):
-    """
-    Analyse un accord dans un contexte tonal/modal et retourne un dictionnaire
-    détaillé contenant toutes les informations d'analyse.
-    """
-
-    # On réutilise la fonction helper pour formater les chiffrages
-    def _format_numeral(base_numeral, quality):
-        display_numeral = base_numeral
-        core_quality = CORE_QUALITIES.get(quality, "major")
-        if core_quality in ["minor", "diminished"]:
-            display_numeral = display_numeral.lower()
-
-        suffix_map = {
-            "maj7": "maj7",
-            "m7": "7",
-            "7": "7",
-            "m7b5": "ø7",
-            "dim7": "°7",
-            "dim": "°",
-        }
-        suffix = suffix_map.get(quality, "")
-        return display_numeral + suffix
-
-    # --- Logique d'analyse ---
-    parsed_chord = parse_chord(chord_name)
-    if not parsed_chord:
-        return {"chord": chord_name, "error": "Invalid Chord"}
-
-    chord_index, found_quality = parsed_chord
-    interval = (chord_index - tonic_index + 12) % 12
-    mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
-
-    if interval not in mode_intervals:
-        return {
-            "chord": chord_name,
-            "found_numeral": f"({chord_name})",
-            "expected_numeral": "N/A",
-            "found_quality": found_quality,
-            "expected_quality": None,
-            "is_diatonic": False,
-        }
-
-    degree_index = mode_intervals.index(interval)
-    base_numeral = ROMAN_DEGREES[degree_index]
-    expected_quality = mode_qualities[degree_index]
-
-    expected_root_index = (tonic_index + mode_intervals[degree_index]) % 12
-    expected_root_name = get_note_from_index(expected_root_index)
-    expected_chord_name = expected_root_name + expected_quality
-
-    expected_numeral = _format_numeral(base_numeral, expected_quality)
-    found_numeral = _format_numeral(base_numeral, found_quality)
-
-    # On assemble le dictionnaire final
-    return {
-        "chord": chord_name,
-        "found_numeral": found_numeral,
-        "expected_numeral": expected_numeral,
-        "found_quality": found_quality,
-        "expected_quality": expected_quality,
-        "expected_chord_name": expected_chord_name,
-        "is_diatonic": is_chord_compatible(found_quality, expected_quality),
-    }
 
 
 def _get_core_quality(quality_str):

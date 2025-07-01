@@ -5,25 +5,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 
-from app.modal_substitution.generator import get_substitutions
+from app.modal_substitution.generator import get_substitutions, get_degrees_to_borrow
 from app.secondary_dominant.generator import (
     get_secondary_dominant_for_target,
 )
 from app.tritone_substitution.generator import get_tritone_substitute
+from app.utils.chords_analyzer import analyze_chord_in_context
 from app.utils.common import (
-    analyze_chord_in_context,
     get_diatonic_7th_chord,
     get_note_from_index,
     get_note_index,
 )
 from app.utils.mode_detection import (
-    detect_mode,
     get_borrowed_chords,
-    get_degrees_to_borrow,
-    guess_possible_tonics,
 )
 from app.utils.mode_detection_gemini import detect_tonic_and_mode
-from constants import MODES_DATA
+from constants import MAJOR_MODES_DATA, MODES_DATA
 
 load_dotenv()
 
@@ -50,18 +47,11 @@ def get_all_substitutions(request: ProgressionRequest):
         return {"error": "Progression cannot be empty"}
 
     try:
-        # Find tonic manually
-        # tonic_candidates = guess_possible_tonics(progression)
-        # tonic = tonic_candidates[0][0]
-        # detected_tonic_index = get_note_index(tonic)
-        # # Find mode
-        # mode = detect_mode(progression, tonic)
-
         # Find tonic with IA
-        # tonic, mode, explanations = detect_tonic_and_mode(progression)
-        tonic = "C"
-        mode = "Mixolydian"
-        explanations = "balbla"
+        tonic, mode, explanations = detect_tonic_and_mode(progression)
+        # tonic = "F"
+        # mode = "Harmonic Minor"
+        # explanations = "balbla"
         detected_tonic_index = get_note_index(tonic)
 
         # Find "foreign" chords from detected mode
@@ -75,11 +65,9 @@ def get_all_substitutions(request: ProgressionRequest):
 
         # Get degrees to borrow
         degrees_to_borrow = get_degrees_to_borrow(quality_analysis)
-
-        # Get substitutions from degrees
+        # Get major modes substitutions from degrees
         substitutions = {}
-        harmonized_chords = {}
-        for mode_name, (_, _, interval) in MODES_DATA.items():
+        for mode_name, (_, _, interval) in MAJOR_MODES_DATA.items():
             relative_tonic_index = (detected_tonic_index + interval + 12) % 12
             new_progression = get_substitutions(
                 progression,
@@ -87,11 +75,14 @@ def get_all_substitutions(request: ProgressionRequest):
                 degrees_to_borrow,
             )
             mode_label = mode_name + " (Original)" if mode_name == mode else mode_name
-
             substitutions[mode_label] = {
                 "borrowed_scale": f"{get_note_from_index(relative_tonic_index)} Major",
                 "substitution": new_progression,
             }
+        # Harmonize all existing modes
+        harmonized_chords = {}
+        for mode_name, (_, _, interval) in MODES_DATA.items():
+            mode_label = mode_name + " (Original)" if mode_name == mode else mode_name
             tonic_index = get_note_index(tonic_name)
             harmonized_chords[mode_label] = [
                 get_diatonic_7th_chord(deg, tonic_index, mode_name)
@@ -115,13 +106,13 @@ def get_all_substitutions(request: ProgressionRequest):
             "explanations": explanations,
             "quality_analysis": quality_analysis,
             "borrowed_chords": borrowed_chords,
-            "substitutions": substitutions,
+            "major_modes_substitutions": substitutions,
             "harmonized_chords": harmonized_chords,
             "secondary_dominants": secondary_dominants,
             "tritone_substitutions": tritone_substitutions,
         }
     except Exception as e:
-        return {"error": str(e)}
+        raise e
 
 
 if __name__ == "__main__":

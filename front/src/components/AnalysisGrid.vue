@@ -74,19 +74,44 @@
 import { ref } from "vue";
 
 const CORE_QUALITIES = {
-  maj7: "major",
-  M: "major",
+  // Majeurs
   "": "major",
+  M: "major",
   maj: "major",
-  7: "major",
-  m7: "minor",
+  maj7: "major",
+  "maj7#5": "major",
+  maj9: "major",
+
+  // Mineurs
   m: "minor",
   min: "minor",
-  m7b5: "diminished",
-  dim7: "diminished",
-  d: "diminished",
-  dim: "diminished",
+  m7: "minor",
+  "m(maj7)": "minor",
+  m6: "minor",
+  m9: "minor",
+  m11: "minor",
+
+  // Dominants
+  7: "dominant",
+  "7b5": "dominant",
+  "7#5": "dominant",
+  "7b9": "dominant",
+  "7#9": "dominant",
+  13: "dominant",
+
+  // Diminués
+  m7b5: "diminished", // demi-diminué (ø7)
+  dim: "diminished", // triade diminuée
+  dim7: "diminished", // diminué 7 (o7)
+  d: "diminished", // raccourci informel
+
+  // Augmentés
   aug: "augmented",
+  "+": "augmented", // raccourci informel
+
+  // Suspendus (pas tonales, mais utile pour filtres)
+  sus2: "suspended",
+  sus4: "suspended",
 };
 
 // Définition des props que le composant attend de son parent
@@ -97,7 +122,6 @@ const props = defineProps({
   },
 });
 
-// État réactif pour suivre les cartes retournées (on utilise un Set pour l'efficacité)
 const flippedCards = ref(new Set());
 
 function shouldShowExpected(analysisItem) {

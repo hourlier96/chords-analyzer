@@ -14,9 +14,19 @@
             </option>
           </select>
           <select v-model="chord.quality">
-            <option v-for="q in QUALITIES" :key="q.value" :value="q.value">
-              {{ q.text }}
-            </option>
+            <optgroup
+              v-for="group in QUALITIES"
+              :key="group.label"
+              :label="group.label"
+            >
+              <option
+                v-for="option in group.options"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.text }}
+              </option>
+            </optgroup>
           </select>
           <button @click="stopEditing" class="close-editor">OK</button>
         </div>
@@ -48,16 +58,71 @@ import { useAnalysisStore } from "@/stores/analysis.js";
 const analysisStore = useAnalysisStore();
 
 // Définition des constantes pour les notes et les qualités d'accords
-const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const NOTES = [
+  "C",
+  "C# / Db",
+  "D",
+  "D# / Eb",
+  "E",
+  "F",
+  "F# / Gb",
+  "G",
+  "G# / Ab",
+  "A",
+  "A# / Bb",
+  "B",
+];
 const QUALITIES = [
-  { value: "", text: "Majeur" },
-  { value: "m", text: "Mineur" },
-  { value: "7", text: "Dominant 7" },
-  { value: "maj7", text: "Majeur 7" },
-  { value: "m7", text: "Mineur 7" },
-  { value: "dim", text: "Diminué" },
-  { value: "m7b5", text: "Demi-diminué (ø7)" },
-  { value: "aug", text: "Augmenté (+)" },
+  {
+    label: "Accords Majeurs",
+    options: [
+      { value: "", text: "Majeur" },
+      { value: "maj7", text: "Majeur 7" },
+      { value: "maj7#5", text: "Majeur 7#5 (Maj7+5)" },
+      { value: "maj9", text: "Majeur 9 (Maj9)" },
+    ],
+  },
+  {
+    label: "Accords Mineurs",
+    options: [
+      { value: "m", text: "Mineur" },
+      { value: "m7", text: "Mineur 7" },
+      { value: "m(maj7)", text: "Mineur Majeur 7 (mMaj7)" },
+      { value: "m6", text: "Mineur 6 (m6)" },
+      { value: "m9", text: "Mineur 9 (m9)" },
+      { value: "m11", text: "Mineur 11 (m11)" },
+    ],
+  },
+  {
+    label: "Accords de Dominante",
+    options: [
+      { value: "7", text: "Dominant 7" },
+      { value: "7b5", text: "Dominant 7♭5" },
+      { value: "7#5", text: "Dominant 7♯5" },
+      { value: "7b9", text: "Dominant 7♭9" },
+      { value: "7#9", text: "Dominant 7♯9" },
+      { value: "13", text: "Dominant 13" },
+    ],
+  },
+  {
+    label: "Accords Diminués",
+    options: [
+      { value: "m7b5", text: "Demi-diminué (ø7)" },
+      { value: "dim", text: "Diminué (triade)" },
+      { value: "dim7", text: "Diminué 7 (o7)" },
+    ],
+  },
+  {
+    label: "Accords Augmentés",
+    options: [{ value: "aug", text: "Augmenté (#5)" }],
+  },
+  {
+    label: "Accords Suspendus",
+    options: [
+      { value: "sus2", text: "Suspended 2 (sus2)" },
+      { value: "sus4", text: "Suspended 4 (sus4)" },
+    ],
+  },
 ];
 
 // --- Props ---
@@ -115,7 +180,7 @@ function addChord() {
   const newChord = {
     id: Date.now(), // Utilise un timestamp pour un ID unique simple.
     root: "C",
-    quality: "maj",
+    quality: "",
   };
   // Met à jour la progression en ajoutant le nouvel accord.
   progression.value = [...progression.value, newChord];
@@ -142,8 +207,13 @@ function stopEditing() {
 
 // Formate le nom de l'accord pour l'affichage.
 function getChordDisplayName(chord) {
-  const qualityInfo = QUALITIES.find((q) => q.value === chord.quality);
-  return `${chord.root}${qualityInfo ? qualityInfo.value : ""}`;
+  for (const group of QUALITIES) {
+    const quality = group.options.find((q) => q.value === chord.quality);
+    if (quality) {
+      return `${chord.root}${quality.value}`;
+    }
+  }
+  return chord.root;
 }
 
 // Émet un événement "analyze" avec la progression actuelle.
