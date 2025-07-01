@@ -1,37 +1,9 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useAnalysisStore } from "@/stores/analysis.js";
-
-// --- 1. Définition des données de base pour l'interface ---
-const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const QUALITIES = [
-  { value: "", text: "Majeur" },
-  { value: "m", text: "Mineur" },
-  { value: "7", text: "Dominant 7" },
-  { value: "maj7", text: "Majeur 7" },
-  { value: "m7", text: "Mineur 7" },
-  { value: "dim", text: "Diminué" },
-  { value: "m7b5", text: "Demi-diminué (ø7)" },
-  { value: "aug", text: "Augmenté (+)" },
-];
-
-const CORE_QUALITIES = {
-  maj7: "major",
-  M: "major",
-  "": "major",
-  maj: "major",
-  7: "major",
-  m7: "minor",
-  m: "minor",
-  min: "minor",
-  m7b5: "diminished",
-  dim7: "diminished",
-  d: "diminished",
-  dim: "diminished",
-  aug: "augmented",
-};
-
-// --- 2. État réactif de l'application ---
+import { mdiInformation, mdiInformationOff } from "@mdi/js";
+import AnalysisGrid from "@/components/AnalysisGrid.vue";
+import ChordProgressionBuilder from "@/components/ChordProgressionBuilder.vue";
 
 const analysisStore = useAnalysisStore();
 
@@ -47,16 +19,8 @@ const progression = ref(
     : defaultProgression
 );
 
-const flippedCards = ref(new Set());
-
-let nextChordId =
-  progression.value.length > 0
-    ? Math.max(...progression.value.map((c) => c.id)) + 1
-    : 1;
-
-const editingChordId = ref(null);
 const isLoading = ref(false);
-const error = ref(null);
+const analysisError = ref(null);
 const isExplanationVisible = ref(false);
 
 // --- 3. Fonctions (Logique de l'interface et de l'API) ---
@@ -70,66 +34,6 @@ const progressionForApi = computed(() => {
   return progression.value.map((chord) => `${chord.root}${chord.quality}`);
 });
 
-const isProgressionUnchanged = computed(() => {
-  if (!analysisStore.lastAnalysis.progression || !analysisStore.hasResult) {
-    return false;
-  }
-  return (
-    JSON.stringify(progression.value) ===
-    JSON.stringify(analysisStore.lastAnalysis.progression)
-  );
-});
-
-function getChordDisplayName(chord) {
-  const qualityInfo = QUALITIES.find((q) => q.value === chord.quality);
-  return qualityInfo?.text === "Majeur"
-    ? chord.root
-    : `${chord.root}${chord.quality}`;
-}
-
-function addChord() {
-  const newId = nextChordId++;
-  progression.value.push({ id: newId, root: "C", quality: "" });
-  editingChordId.value = newId;
-}
-
-function removeChord(idToRemove) {
-  progression.value = progression.value.filter((c) => c.id !== idToRemove);
-}
-
-function startEditing(chordId) {
-  editingChordId.value = editingChordId.value === chordId ? null : chordId;
-}
-
-function shouldShowExpected(analysisItem) {
-  const { found_quality, expected_quality, found_numeral, expected_numeral } =
-    analysisItem;
-
-  if (found_numeral === expected_numeral) return false;
-
-  if (expected_numeral == "N/A") return false;
-
-  const core_found = CORE_QUALITIES[found_quality];
-  const core_expected = CORE_QUALITIES[expected_quality];
-  if (core_found !== core_expected) return true;
-
-  const TRIAD_QUALITIES = ["", "maj", "M", "m", "min"];
-  if (TRIAD_QUALITIES.includes(found_quality)) {
-    return false;
-  }
-
-  // Règle 4 (par défaut): Pour toute autre différence (ex: 7 vs maj7), on l'affiche.
-  return true;
-}
-
-function toggleCardFlip(index) {
-  if (flippedCards.value.has(index)) {
-    flippedCards.value.delete(index); // Si elle est retournée, on la remet à l'endroit
-  } else {
-    flippedCards.value.add(index); // Sinon, on la retourne
-  }
-}
-
 function toggleExplanation() {
   isExplanationVisible.value = !isExplanationVisible.value;
 }
@@ -137,13 +41,14 @@ function toggleExplanation() {
 // Fonction principale d'appel à l'API
 async function analyzeProgression() {
   isLoading.value = true;
-  error.value = null;
+  analysisError.value = null;
   analysisStore.clearResult();
   isExplanationVisible.value = false;
 
   const chords = progressionForApi.value;
   if (chords.length < 2) {
-    error.value = "Veuillez construire une progression d'au moins 2 accords.";
+    analysisError.value =
+      "Veuillez construire une progression d'au moins 2 accords.";
     isLoading.value = false;
     return;
   }
@@ -162,7 +67,7 @@ async function analyzeProgression() {
     const progressionSnapshot = JSON.parse(JSON.stringify(progression.value));
     analysisStore.setLastAnalysis(data, progressionSnapshot);
   } catch (e) {
-    error.value = `Une erreur est survenue : ${e.message}`;
+    analysisError.value = `Une erreur est survenue : ${e.message}`;
     analysisStore.clearResult();
   } finally {
     isLoading.value = false;
@@ -180,142 +85,46 @@ async function analyzeProgression() {
       </p>
     </header>
 
-    <div class="builder-area">
-      <div class="progression-builder">
-        <div
-          v-for="chord in progression"
-          :key="chord.id"
-          class="chord-slot"
-          :ref="
-            (el) => {
-              if (chord.id === editingChordId) activeChordSlotRef = el;
-            }
-          "
-        >
-          <button class="chord-button" @click="startEditing(chord.id)">
-            {{ getChordDisplayName(chord) }}
-          </button>
-          <button class="remove-button" @click="removeChord(chord.id)">
-            ×
-          </button>
-
-          <div v-if="editingChordId === chord.id" class="editor-popover">
-            <select v-model="chord.root">
-              <option v-for="note in NOTES" :key="note" :value="note">
-                {{ note }}
-              </option>
-            </select>
-            <select v-model="chord.quality">
-              <option v-for="q in QUALITIES" :key="q.value" :value="q.value">
-                {{ q.text }}
-              </option>
-            </select>
-            <button @click="editingChordId = null" class="close-editor">
-              OK
-            </button>
-          </div>
-        </div>
-        <button class="add-button" @click="addChord()">+</button>
-      </div>
-
-      <div class="analyze-button-container">
-        <button
-          class="analyze-button"
-          @click="analyzeProgression"
-          :disabled="isLoading || isProgressionUnchanged"
-        >
-          {{ isLoading ? "Analyse..." : "Analyser la Progression" }}
-        </button>
-      </div>
-    </div>
-
-    <div v-if="isLoading" class="loading">Analyse en cours...</div>
-    <div v-if="error" class="error-message">{{ error }}</div>
+    <ChordProgressionBuilder
+      v-model="progression"
+      :is-loading="isLoading"
+      :error="analysisError"
+      @analyze="analyzeProgression()"
+    />
 
     <div v-if="analysisStore.hasResult" class="content-grid">
       <div class="left-column">
         <div class="results-box">
           <h2 class="result-title">
-            --- {{ analysisResults.tonic }}
-            {{ analysisResults.mode.replace(" (Original)", "") }} ---
+            {{ analysisResults.tonic }}
+            {{ analysisResults.mode.replace(" (Original)", "") }}
+            <span v-if="analysisResults.explanations">
+              <v-icon
+                size="x-small"
+                :icon="
+                  isExplanationVisible ? mdiInformationOff : mdiInformation
+                "
+                :aria-label="
+                  isExplanationVisible
+                    ? 'Masquer l\'explication'
+                    : 'Afficher l\'explication'
+                "
+                @click="toggleExplanation"
+              ></v-icon>
+            </span>
           </h2>
-          <div
-            v-if="analysisResults.quality_analysis"
-            class="detailed-analysis-container"
-          >
-            <div class="analysis-grid">
-              <div
-                v-for="(item, index) in analysisResults.quality_analysis"
-                :key="index"
-                class="analysis-card-container"
-              >
-                <div
-                  class="card-inner"
-                  :class="{ 'is-flipped': flippedCards.has(index) }"
-                >
-                  <div class="analysis-card card-front">
-                    <div class="card-content">
-                      <div class="chord-name">{{ item.chord }}</div>
-                      <div
-                        :class="{ foreign_chord: !item.is_diatonic }"
-                        class="found-numeral"
-                      >
-                        {{ item.found_numeral }}
-                      </div>
-                      <div
-                        v-if="
-                          analysisResults.borrowed_chords &&
-                          analysisResults.borrowed_chords[item.chord]
-                        "
-                        class="borrowed-info"
-                      >
-                        <em
-                          >Emprunt de :
-                          {{
-                            analysisResults.borrowed_chords[item.chord].join(
-                              ", "
-                            )
-                          }}</em
-                        >
-                      </div>
-                    </div>
-                    <button
-                      v-if="shouldShowExpected(item)"
-                      class="flip-button"
-                      @click="toggleCardFlip(index)"
-                    >
-                      &#x21BA;
-                    </button>
-                  </div>
 
-                  <div class="analysis-card card-back">
-                    <div class="card-content">
-                      <div class="expected-chord-name">
-                        {{ item.expected_chord_name }}
-                      </div>
-                      <div class="expected-numeral">
-                        {{ item.expected_numeral }}
-                      </div>
-                    </div>
-                    <button class="flip-button" @click="toggleCardFlip(index)">
-                      &#x21BA;
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="analysisResults.explanations" class="explanation-section">
-            <button @click="toggleExplanation" class="explanation-toggle">
-              {{ isExplanationVisible ? "Masquer" : "Afficher" }} l'explication
-            </button>
+          <div class="explanation-section">
             <div v-show="isExplanationVisible" class="explanation-content">
               <p>{{ analysisResults.explanations }}</p>
             </div>
           </div>
+          <AnalysisGrid
+            v-if="analysisResults.quality_analysis"
+            :analysis-results="analysisResults"
+          />
 
-          <h3 v-if="analysisResults.substitutions">
+          <!-- <h3 v-if="analysisResults.substitutions">
             Table de Substitutions Modales :
           </h3>
           <table
@@ -392,7 +201,7 @@ async function analyzeProgression() {
                 </td>
               </tr>
             </tbody>
-          </table>
+          </table> -->
         </div>
       </div>
 
@@ -497,118 +306,6 @@ h3 {
   padding-bottom: 0.5rem;
 }
 
-/* Styles du constructeur de progression */
-.builder-area {
-  background-color: #2f2f2f;
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 2rem;
-}
-.progression-builder {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-}
-.chord-slot {
-  position: relative;
-}
-.chord-button {
-  padding: 1rem 1.5rem;
-  font-size: 1.5rem;
-  font-weight: 600;
-  border-radius: 8px;
-  border: 2px solid #555;
-  background-color: #3c3c3c;
-  color: white;
-  cursor: pointer;
-  min-width: 100px;
-  transition: all 0.2s;
-}
-.chord-button:hover {
-  border-color: #007bff;
-}
-.remove-button {
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  background-color: #ff4d4d;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-.add-button {
-  width: 50px;
-  height: 50px;
-  font-size: 2rem;
-  border-radius: 50%;
-  border: 2px dashed #555;
-  background-color: transparent;
-  color: #888;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.add-button:hover {
-  background-color: #3c3c3c;
-  color: white;
-  border-color: #888;
-}
-.editor-popover {
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #4a4a4a;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  width: 220px;
-}
-.editor-popover select {
-  width: 100%;
-  padding: 0.5rem;
-  font-size: 1rem;
-  border-radius: 4px;
-}
-.editor-popover .close-editor {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background-color: #007bff;
-  border: none;
-  color: white;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.analyze-button-container {
-  margin-top: 2rem;
-  text-align: center;
-}
-.analyze-button {
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
-  border-radius: 8px;
-  border: none;
-  background-color: #007bff;
-  color: white;
-  cursor: pointer;
-}
-.analyze-button:disabled {
-  background-color: #555;
-  cursor: not-allowed;
-}
-
 /* Styles pour la grille de résultats */
 .content-grid {
   display: grid;
@@ -629,6 +326,20 @@ h3 {
   margin-top: 0;
   margin-bottom: 1.5rem;
   color: #a0cfff;
+}
+
+.explanation-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px; /* Assure une taille minimale au bouton */
+  min-height: 38px;
+}
+
+.info-icon {
+  width: 1.5em; /* Taille de l'icône relative à la police */
+  height: 1.5em;
+  color: rgb(96, 170, 239);
 }
 
 /* Styles pour les sections d'analyse */
@@ -721,138 +432,5 @@ h3 {
   display: inline-block;
   min-width: 55px;
   text-align: left;
-}
-
-.detailed-analysis-container {
-  margin-bottom: 2rem;
-}
-
-.analysis-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  padding: 1rem;
-  background-color: #3a3a3a;
-  border-radius: 8px;
-}
-
-.analysis-card {
-  flex: 1;
-  min-width: 120px;
-  padding: 1rem 0 0 0;
-  border-radius: 6px;
-  background-color: #4a4a4a;
-  text-align: center;
-  border: 2px solid #555;
-  transition: all 0.2s;
-}
-
-.analysis-card .chord-name {
-  font-size: 1.8rem;
-}
-
-/* On met en évidence les cartes des accords non-diatoniques */
-
-.analysis-card .found-numeral {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #a0cfff;
-  margin: 0.5rem 0;
-}
-
-.analysis-card .foreign_chord {
-  color: rgb(255, 95, 95) !important;
-}
-
-.analysis-card .expected-numeral {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #a0cfff;
-  margin: 0.5rem 0;
-}
-
-.analysis-card .borrowed-info {
-  font-size: 0.8rem;
-}
-
-.analysis-card .borrowed-info em {
-  color: #fdcb6e;
-}
-.analysis-card-container {
-  background-color: transparent;
-  min-width: 140px;
-  height: 180px;
-  perspective: 1000px; /* Crée l'espace 3D */
-  flex: 1;
-}
-
-.card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  text-align: center;
-  transition: transform 0.6s; /* La durée de l'animation */
-  transform-style: preserve-3d; /* Permet la 3D */
-}
-
-/* Applique la rotation quand la classe .is-flipped est présente */
-.analysis-card-container .is-flipped {
-  transform: rotateY(180deg);
-}
-
-/* Le .analysis-card est maintenant un panneau. On retire sa bordure */
-.analysis-card {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden; /* Cache le dos du panneau quand il est retourné */
-  border: 2px solid #555;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-/* Positionnement et rotation du verso */
-.card-back {
-  background-color: #3d5a80; /* Une couleur différente pour le verso */
-  border-color: #98c1d9;
-  transform: rotateY(180deg);
-}
-
-.card-back-title {
-  font-size: 0.9em;
-  font-weight: bold;
-  color: #e0fbfc;
-}
-
-.expected-chord-name {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: green;
-  margin: 0.5rem 0;
-}
-
-.flip-button {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 24px;
-}
-
-.flip-button:hover {
-  background: rgba(255, 255, 255, 0.2);
 }
 </style>
