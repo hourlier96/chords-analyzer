@@ -8,13 +8,10 @@ import ChordProgressionBuilder from "@/components/ChordProgressionBuilder.vue";
 const analysisStore = useAnalysisStore();
 
 const defaultProgression = [
-  { id: 1, root: "A", quality: "m" },
-  { id: 2, root: "D", quality: "7" },
+  { id: 1, root: "C", quality: "" },
+  { id: 2, root: "D", quality: "m" },
   { id: 3, root: "G", quality: "7" },
-  { id: 4, root: "C", quality: "" },
-  { id: 5, root: "F", quality: "maj7" },
-  { id: 5, root: "F", quality: "m" },
-  { id: 5, root: "C", quality: "" },
+  { id: 4, root: "A", quality: "m7" },
 ];
 
 const progression = ref(

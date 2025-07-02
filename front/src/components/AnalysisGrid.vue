@@ -5,19 +5,20 @@
   >
     <div class="analysis-header">
       <div class="header-controls">
-        <button
-          @click="showSecondaryDominants = !showSecondaryDominants"
-          class="control-icon-button"
-          :class="{ 'is-active': showSecondaryDominants }"
-          title="Afficher/Cacher les dominantes secondaires"
-        >
-          <span style="font-size: 15px; font-weight: bold">V/</span>
-        </button>
+        <v-tooltip location="top" text="Dominantes secondaires">
+          <template #activator="{ props }">
+            <button
+              v-bind="props"
+              @click="showSecondaryDominants = !showSecondaryDominants"
+              class="control-icon-button"
+              :class="{ 'is-active': showSecondaryDominants }"
+            >
+              <span style="font-size: 15px; font-weight: bold">V/</span>
+            </button>
+          </template>
+        </v-tooltip>
 
-        <v-tooltip
-          location="top"
-          text="Afficher/Cacher les substitutions tritoniques (subV)"
-        >
+        <v-tooltip location="top" text="Substitutions tritoniques pertinentes">
           <template #activator="{ props }">
             <button
               v-bind="props"
@@ -29,35 +30,47 @@
             </button>
           </template>
         </v-tooltip>
+
+        <v-tooltip location="top" text="Substitutions modales">
+          <template #activator="{ props: tooltipProps }">
+            <v-menu location="bottom">
+              <template #activator="{ props: menuProps }">
+                <button
+                  v-bind="{ ...tooltipProps, ...menuProps }"
+                  class="control-icon-button"
+                  :class="{ 'is-active': activeMode !== 'Ionian (Original)' }"
+                >
+                  <v-icon :icon="mdiSync" />
+                </button>
+              </template>
+              <v-list density="compact">
+                <v-list-item
+                  v-for="option in modeOptions"
+                  :key="option.value"
+                  @click="activeMode = option.value"
+                >
+                  <v-list-item-title>{{ option.title }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </template>
+        </v-tooltip>
       </div>
     </div>
 
     <div class="analysis-grid">
       <div
-        v-for="(item, index) in analysis.result.quality_analysis"
-        :key="`group-${index}`"
+        v-for="(item, index) in displayedProgression"
+        :key="`${activeMode}-${index}`"
         class="chord-progression-group"
       >
-        <div
-          v-if="
-            showSecondaryDominants && secondaryDominantsMap.has(item.chord)
-            /* La condition sur l'état du triton est supprimée car les deux peuvent coexister */
-          "
-          class="secondary-dominant-card"
-        >
-          <div class="card-content">
-            <div class="chord-name">
-              {{ secondaryDominantsMap.get(item.chord) }}
-            </div>
-            <div class="arrow-symbol">→</div>
-          </div>
-        </div>
-
         <AnalysisCard
           :item="item"
           :analysis="analysis"
           :current-index="index"
           :is-tritone-mode-active="showTritonSubstitutions"
+          :show-secondary-dominant="showSecondaryDominants"
+          :secondary-dominant-chord="secondaryDominantsMap.get(item.chord)"
         />
       </div>
     </div>
@@ -67,7 +80,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import AnalysisCard from "@/components/AnalysisCard.vue";
-import { mdiYinYang } from "@mdi/js"; // NOUVEAU : Import de l'icône
+import { mdiYinYang, mdiSync } from "@mdi/js";
 
 const props = defineProps({
   analysis: {
@@ -78,6 +91,47 @@ const props = defineProps({
 
 const showSecondaryDominants = ref(false);
 const showTritonSubstitutions = ref(false);
+const activeMode = ref("Ionian (Original)");
+
+const modeOptions = computed(() => {
+  if (!props.analysis.result?.major_modes_substitutions) {
+    return [];
+  }
+  return Object.entries(props.analysis.result.major_modes_substitutions).map(
+    ([modeName, modeData]) => ({
+      title: `${modeName}: ${modeData.borrowed_scale}`,
+      value: modeName,
+    })
+  );
+});
+
+const displayedProgression = computed(() => {
+  if (!props.analysis.result) return [];
+  const originalProgression = props.analysis.result.quality_analysis;
+  if (activeMode.value === "Ionian (Original)" || !activeMode.value) {
+    return originalProgression;
+  }
+  const modeData =
+    props.analysis.result.major_modes_substitutions?.[activeMode.value];
+  if (!modeData || !modeData.substitution) {
+    return originalProgression;
+  }
+  return modeData.substitution.map((chordName, index) => {
+    // Pour le premier accord (index 0), on retourne l'accord de la progression originale.
+    if (index === 0) {
+      return originalProgression[0];
+    }
+
+    // Pour tous les autres accords, on retourne la substitution.
+    return {
+      chord: chordName,
+      found_numeral: null,
+      is_diatonic: false,
+      expected_chord_name: null,
+      expected_numeral: null,
+    };
+  });
+});
 
 const secondaryDominantsMap = computed(() => {
   const map = new Map();
@@ -98,7 +152,6 @@ const secondaryDominantsMap = computed(() => {
   margin-bottom: 2rem;
 }
 
-/* NOUVEAU : Styles pour le header et ses contrôles */
 .analysis-header {
   display: flex;
   justify-content: flex-start;
@@ -134,10 +187,10 @@ const secondaryDominantsMap = computed(() => {
   background-color: #4a4a4a;
   color: #edf2f4;
   border: 1px solid #555;
-  border-radius: 50%; /* Makes the button round */
-  width: 40px; /* Defines a fixed width */
-  height: 40px; /* Defines a fixed height */
-  padding: 0; /* Removes default padding */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   font-weight: bold;
   font-family: "Courier New", Courier, monospace;
   font-size: 1rem;
@@ -145,8 +198,6 @@ const secondaryDominantsMap = computed(() => {
   transition:
     background-color 0.2s,
     border-color 0.2s;
-
-  /* Flexbox for perfect centering of the text */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -155,6 +206,22 @@ const secondaryDominantsMap = computed(() => {
 .header-controls .control-icon-button:hover {
   background-color: #5a5a5a;
   border-color: #777;
+}
+
+.mode-select {
+  max-width: 220px;
+  background-color: #4a4a4a;
+  color: #edf2f4;
+  border-radius: 6px;
+}
+
+:deep(.mode-select .v-field) {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+:deep(.mode-select .v-field__input) {
+  padding-top: 2px;
 }
 
 .control-icon-button.is-active {
@@ -174,7 +241,6 @@ button.control-icon-button:has(.v-icon) {
 
 .analysis-grid {
   display: grid;
-  /* Default to a single, full-width column on narrow screens */
   grid-template-columns: 1fr;
   gap: 1.5rem;
   padding: 1rem;
@@ -182,7 +248,6 @@ button.control-icon-button:has(.v-icon) {
   border-radius: 8px;
 }
 
-/* Apply the multi-column layout only when the screen is wide enough for at least two items */
 @media (min-width: 600px) {
   .analysis-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -191,44 +256,7 @@ button.control-icon-button:has(.v-icon) {
 
 .chord-progression-group {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: center; /* Add this line to center the cards */
-}
-
-/* NEW: Styles for the secondary dominant card */
-.secondary-dominant-card {
-  display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  box-sizing: border-box;
-  min-width: 80px;
-  height: 180px;
-  padding: 1rem;
-  border-radius: 6px;
-  background-color: #4f3b78; /* Distinct purple color */
-  border: 2px solid #7a5ba9;
-  color: #e6dff2;
-  text-align: center;
-}
-
-.secondary-dominant-card .chord-name {
-  font-size: 1.8rem;
-  font-weight: bold;
-}
-
-.secondary-dominant-card .arrow-symbol {
-  font-size: 2rem;
-  line-height: 1;
-  margin: 0.25rem 0;
-  color: #c3aedc;
-}
-
-.secondary-dominant-card .sd-label {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #c3aedc;
 }
 </style>
