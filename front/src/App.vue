@@ -9,14 +9,18 @@ const analysisStore = useAnalysisStore();
 
 const defaultProgression = [
   { id: 1, root: "A", quality: "m" },
-  { id: 2, root: "G", quality: "7" },
-  { id: 3, root: "C", quality: "" },
-  { id: 4, root: "F", quality: "maj7" },
+  { id: 2, root: "D", quality: "7" },
+  { id: 3, root: "G", quality: "7" },
+  { id: 4, root: "C", quality: "" },
+  { id: 5, root: "F", quality: "maj7" },
+  { id: 5, root: "F", quality: "m" },
+  { id: 5, root: "C", quality: "" },
 ];
+
 const progression = ref(
   analysisStore.lastAnalysis.progression &&
     analysisStore.lastAnalysis.progression.length > 0
-    ? analysisStore.lastAnalysis.progression
+    ? JSON.parse(JSON.stringify(analysisStore.lastAnalysis.progression))
     : defaultProgression
 );
 

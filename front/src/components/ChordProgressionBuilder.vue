@@ -1,36 +1,47 @@
 <template>
   <div class="builder-container">
     <div class="progression-builder">
-      <div v-for="chord in progression" :key="chord.id" class="chord-slot">
-        <button class="chord-button" @click="startEditing(chord)">
-          {{ getChordDisplayName(chord) }}
-        </button>
-        <button class="remove-button" @click="removeChord(chord.id)">×</button>
+      <draggable
+        v-model="progression"
+        item-key="id"
+        class="draggable-container"
+        ghost-class="ghost"
+      >
+        <template #item="{ element: chord }">
+          <div class="chord-slot">
+            <button class="chord-button" @click="startEditing(chord)">
+              {{ getChordDisplayName(chord) }}
+            </button>
+            <button class="remove-button" @click="removeChord(chord.id)">
+              ×
+            </button>
+            <div v-if="editingChordId === chord.id" class="editor-popover">
+              <select v-model="chord.root">
+                <option v-for="note in NOTES" :key="note" :value="note">
+                  {{ note }}
+                </option>
+              </select>
+              <select v-model="chord.quality">
+                <optgroup
+                  v-for="group in QUALITIES"
+                  :key="group.label"
+                  :label="group.label"
+                >
+                  <option
+                    v-for="option in group.options"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.text }}
+                  </option>
+                </optgroup>
+              </select>
+              <button @click="stopEditing" class="close-editor">OK</button>
+            </div>
+          </div>
+        </template>
+      </draggable>
 
-        <div v-if="editingChordId === chord.id" class="editor-popover">
-          <select v-model="chord.root">
-            <option v-for="note in NOTES" :key="note" :value="note">
-              {{ note }}
-            </option>
-          </select>
-          <select v-model="chord.quality">
-            <optgroup
-              v-for="group in QUALITIES"
-              :key="group.label"
-              :label="group.label"
-            >
-              <option
-                v-for="option in group.options"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.text }}
-              </option>
-            </optgroup>
-          </select>
-          <button @click="stopEditing" class="close-editor">OK</button>
-        </div>
-      </div>
       <button class="add-button" @click="addChord()">+</button>
     </div>
 
@@ -63,10 +74,10 @@
 <script setup>
 import { ref, defineEmits, computed } from "vue";
 import { useAnalysisStore } from "@/stores/analysis.js";
+import draggable from "vuedraggable";
 
 const analysisStore = useAnalysisStore();
 
-// Définition des constantes pour les notes et les qualités d'accords
 const NOTES = [
   "C",
   "C# / Db",
@@ -136,37 +147,16 @@ const QUALITIES = [
   },
 ];
 
-// --- Props ---
-// Déclare les propriétés que le composant peut recevoir de son parent.
 const props = defineProps({
-  // Utilise v-model pour synchroniser la progression avec le composant parent.
-  modelValue: {
-    type: Array,
-    required: true,
-  },
-  // État de chargement pour le bouton d'analyse.
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
-  // Message d'erreur à afficher.
-  error: {
-    type: String,
-    default: "",
-  },
+  modelValue: { type: Array, required: true },
+  isLoading: { type: Boolean, default: false },
+  error: { type: String, default: "" },
 });
 
-// --- Emits ---
-// Déclare les événements que le composant peut émettre vers son parent.
 const emit = defineEmits(["update:modelValue", "analyze"]);
 
-// --- État interne ---
-// `ref` est utilisé pour les variables réactives.
 const editingChordId = ref(null);
 
-// --- Propriété calculée (Computed) ---
-// Crée une variable `progression` qui est synchronisée avec la prop `modelValue`.
-// C'est la manière standard de gérer `v-model` dans un composant.
 const progression = computed({
   get: () => props.modelValue,
   set: (newValue) => {
@@ -184,40 +174,27 @@ const isProgressionUnchanged = computed(() => {
   );
 });
 
-// --- Méthodes ---
-
-// Ajoute un nouvel accord par défaut à la progression.
 function addChord() {
-  const newChord = {
-    id: Date.now(), // Utilise un timestamp pour un ID unique simple.
-    root: "C",
-    quality: "",
-  };
-  // Met à jour la progression en ajoutant le nouvel accord.
+  const newChord = { id: Date.now(), root: "C", quality: "" };
   progression.value = [...progression.value, newChord];
   startEditing(newChord);
 }
 
-// Supprime un accord en fonction de son ID.
 function removeChord(chordId) {
   progression.value = progression.value.filter((c) => c.id !== chordId);
-  // Si on supprime l'accord qu'on éditait, on ferme le pop-over.
   if (editingChordId.value === chordId) {
     stopEditing();
   }
 }
 
-// Ouvre le pop-over d'édition pour un accord spécifique.
 function startEditing(chord) {
   editingChordId.value = chord.id;
 }
 
-// Ferme le pop-over d'édition.
 function stopEditing() {
   editingChordId.value = null;
 }
 
-// Formate le nom de l'accord pour l'affichage.
 function getChordDisplayName(chord) {
   for (const group of QUALITIES) {
     const quality = group.options.find((q) => q.value === chord.quality);
@@ -228,30 +205,43 @@ function getChordDisplayName(chord) {
   return chord.root;
 }
 
-// Émet un événement "analyze" avec la progression actuelle.
-// La logique d'analyse est gérée par le composant parent.
 function onAnalyze() {
   emit("analyze", progression.value);
 }
 </script>
 
 <style scoped>
-/* Le mot-clé "scoped" assure que ces styles ne s'appliquent qu'à ce composant. */
 .builder-container {
   background-color: #2f2f2f;
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;
 }
+
 .progression-builder {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
 }
+
+.draggable-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .chord-slot {
   position: relative;
+  cursor: grab;
 }
+
+.ghost {
+  opacity: 0.5;
+  background: #4a4a4a;
+  border: 2px dashed #007bff;
+}
+
 .chord-button {
   padding: 1rem 1.5rem;
   font-size: 1.5rem;
@@ -260,13 +250,14 @@ function onAnalyze() {
   border: 2px solid #555;
   background-color: #3c3c3c;
   color: white;
-  cursor: pointer;
   min-width: 100px;
   transition: all 0.2s;
 }
+
 .chord-button:hover {
   border-color: #007bff;
 }
+
 .remove-button {
   position: absolute;
   top: -10px;
@@ -284,6 +275,7 @@ function onAnalyze() {
   justify-content: center;
   line-height: 1;
 }
+
 .add-button {
   width: 50px;
   height: 50px;
@@ -295,11 +287,13 @@ function onAnalyze() {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .add-button:hover {
   background-color: #3c3c3c;
   color: white;
   border-color: #888;
 }
+
 .editor-popover {
   position: absolute;
   top: calc(100% + 10px);
@@ -321,19 +315,22 @@ function onAnalyze() {
   padding: 4px;
   border-radius: 4px;
 }
+
 .editor-popover .close-editor {
   margin-top: 0.5rem;
   padding: 0.5rem;
   background-color: #007bff;
-  border: 1 px solid;
+  border: 1px solid;
   color: white;
   border-radius: 4px;
   cursor: pointer;
 }
+
 .analyze-button-container {
   margin-top: 2rem;
   text-align: center;
 }
+
 .analyze-button {
   padding: 1rem 2rem;
   font-size: 1.2rem;
@@ -343,6 +340,7 @@ function onAnalyze() {
   color: white;
   cursor: pointer;
 }
+
 .analyze-button:disabled {
   background-color: #555;
   cursor: not-allowed;
