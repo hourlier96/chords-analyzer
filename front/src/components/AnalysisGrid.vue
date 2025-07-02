@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="analysisResults && analysisResults.quality_analysis"
+    v-if="analysis.result && analysis.result.quality_analysis"
     class="detailed-analysis-container"
   >
     <div class="analysis-header">
@@ -9,28 +9,39 @@
           @click="showSecondaryDominants = !showSecondaryDominants"
           class="control-icon-button"
           :class="{ 'is-active': showSecondaryDominants }"
-          :title="
-            showSecondaryDominants
-              ? 'Cacher les dominantes secondaires'
-              : 'Afficher les dominantes secondaires'
-          "
+          title="Afficher/Cacher les dominantes secondaires"
         >
           <span style="font-size: 15px; font-weight: bold">V/</span>
         </button>
+
+        <v-tooltip
+          location="top"
+          text="Afficher/Cacher les substitutions tritoniques (subV)"
+        >
+          <template #activator="{ props }">
+            <button
+              v-bind="props"
+              @click="showTritonSubstitutions = !showTritonSubstitutions"
+              class="control-icon-button"
+              :class="{ 'is-active': showTritonSubstitutions }"
+            >
+              <v-icon :icon="mdiYinYang" />
+            </button>
+          </template>
+        </v-tooltip>
       </div>
     </div>
 
     <div class="analysis-grid">
       <div
-        v-for="(item, index) in analysisResults.quality_analysis"
+        v-for="(item, index) in analysis.result.quality_analysis"
         :key="`group-${index}`"
         class="chord-progression-group"
       >
         <div
           v-if="
-            showSecondaryDominants &&
-            secondaryDominantsMap.has(item.chord) &&
-            !tritoneSwapStates[index]
+            showSecondaryDominants && secondaryDominantsMap.has(item.chord)
+            /* La condition sur l'état du triton est supprimée car les deux peuvent coexister */
           "
           class="secondary-dominant-card"
         >
@@ -43,12 +54,10 @@
         </div>
 
         <AnalysisCard
-          :key="index"
           :item="item"
-          :analysisResults="analysisResults"
-          @tritone-swap-toggled="
-            (isSwapped) => handleTritoneToggle(index, isSwapped)
-          "
+          :analysis="analysis"
+          :current-index="index"
+          :is-tritone-mode-active="showTritonSubstitutions"
         />
       </div>
     </div>
@@ -58,28 +67,23 @@
 <script setup>
 import { ref, computed } from "vue";
 import AnalysisCard from "@/components/AnalysisCard.vue";
+import { mdiYinYang } from "@mdi/js"; // NOUVEAU : Import de l'icône
 
-// Définition des props que le composant attend de son parent
 const props = defineProps({
-  analysisResults: {
+  analysis: {
     type: Object,
     required: true,
   },
 });
 
 const showSecondaryDominants = ref(false);
-const tritoneSwapStates = ref({});
+const showTritonSubstitutions = ref(false);
 
-/**
- * Creates a Map where the key is the target chord and the value is its secondary dominant.
- * This makes it easy and efficient to look up in the template.
- */
 const secondaryDominantsMap = computed(() => {
   const map = new Map();
-  if (props.analysisResults && props.analysisResults.secondary_dominants) {
-    // The prop is an object of tuples [secondary_dominant, target_chord]
+  if (props.analysis.result && props.analysis.result.secondary_dominants) {
     for (const dominantPair of Object.values(
-      props.analysisResults.secondary_dominants
+      props.analysis.result.secondary_dominants
     )) {
       const [secondaryChord, targetChord] = dominantPair;
       map.set(targetChord, secondaryChord);
@@ -87,10 +91,6 @@ const secondaryDominantsMap = computed(() => {
   }
   return map;
 });
-
-const handleTritoneToggle = (index, isSwapped) => {
-  tritoneSwapStates.value[index] = isSwapped;
-};
 </script>
 
 <style scoped>
@@ -162,6 +162,16 @@ const handleTritoneToggle = (index, isSwapped) => {
   background-color: #6497cc;
 }
 
+.control-icon-button.is-active .v-icon {
+  color: #000000;
+}
+button.control-icon-button:has(.v-icon) {
+  font-size: 1.2rem;
+}
+.control-icon-button.is-active:has(.v-icon) {
+  background-color: #fdcb6e;
+}
+
 .analysis-grid {
   display: grid;
   /* Default to a single, full-width column on narrow screens */
@@ -193,7 +203,7 @@ const handleTritoneToggle = (index, isSwapped) => {
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
-  min-width: 120px;
+  min-width: 80px;
   height: 180px;
   padding: 1rem;
   border-radius: 6px;

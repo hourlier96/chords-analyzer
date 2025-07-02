@@ -1,34 +1,46 @@
+Vous avez tout à fait raison, mes excuses. J'ai détaillé les changements pour le
+composant enfant mais j'ai omis de vous fournir le bloc de code final et
+complet. Le voici. Ce code pour AnalysisCard.vue intègre la prop
+isTritoneModeActive et utilise la propriété calculée showDiagonalSplit pour
+afficher la vue en diagonale. Composant Enfant Final : AnalysisCard.vue Code
+snippet
+
 <template>
   <div class="analysis-card-container">
     <div class="card-inner" :class="{ 'is-flipped': isFlipped }">
       <div
         class="analysis-card card-front"
-        :class="{ 'is-swapped': isShowingTritone && tritoneSubstitutionData }"
+        :class="{ 'is-split': showDiagonalSplit }"
       >
-        <v-tooltip location="top" text="Substitution tritonique">
-          <template #activator="{ props }">
-            <button
-              v-if="tritoneSubstitutionData"
-              v-bind="props"
-              class="swap-button"
-              :class="{ 'is-active': isShowingTritone }"
-              @click="toggleTritoneSwap"
-            >
-              <v-icon :icon="mdiYinYang"></v-icon>
-            </button>
-          </template>
-        </v-tooltip>
+        <div v-if="showDiagonalSplit" class="diagonal-container">
+          <div class="tritone-chord-area">
+            <div class="card-content">
+              <div class="chord-name">{{ tritoneSubstitutionData.chord }}</div>
+              <div class="found-numeral tritone_sub_chord">
+                {{ tritoneSubstitutionData.found_numeral }}
+              </div>
+            </div>
+          </div>
+          <div class="original-chord-area">
+            <div class="card-content">
+              <div class="chord-name">{{ item.chord }}</div>
+              <div
+                class="found-numeral"
+                :class="{ foreign_chord: !item.is_diatonic }"
+              >
+                {{ item.found_numeral }}
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <div class="card-content">
-          <div class="chord-name">{{ displayItem.chord }}</div>
+        <div v-else class="card-content">
+          <div class="chord-name">{{ item.chord }}</div>
           <div
             class="found-numeral"
-            :class="{
-              tritone_sub_chord: isShowingTritone,
-              foreign_chord: !displayItem.is_diatonic && !isShowingTritone,
-            }"
+            :class="{ foreign_chord: !item.is_diatonic }"
           >
-            {{ displayItem.found_numeral }}
+            {{ item.found_numeral }}
             <v-tooltip v-if="borrowedInfo" location="right">
               <template #activator="{ props }">
                 <v-icon
@@ -39,7 +51,7 @@
               </template>
               <div class="borrowed-info-tooltip">
                 <div v-for="(borrowed, idx) in borrowedInfo" :key="idx">
-                  {{ analysisResults.tonic }}
+                  {{ analysis.result.tonic }}
                   {{ borrowed }}
                 </div>
               </div>
@@ -50,7 +62,7 @@
         <v-tooltip
           v-if="shouldShowExpected"
           location="top"
-          :text="`Swap vers l'accord diatonique en ${analysisResults.tonic} ${analysisResults.mode}`"
+          text="Swap vers l'accord diatonique"
         >
           <template #activator="{ props }">
             <button v-bind="props" class="flip-button" @click="toggleCardFlip">
@@ -65,7 +77,6 @@
           <div class="expected-chord-name">{{ item.expected_chord_name }}</div>
           <div class="expected-numeral">{{ item.expected_numeral }}</div>
         </div>
-
         <v-tooltip location="top" text="Swap vers l'accord d'origine">
           <template #activator="{ props }">
             <button v-bind="props" class="flip-button" @click="toggleCardFlip">
@@ -77,90 +88,101 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, computed } from "vue";
-import { mdiInformation, mdiYinYang } from "@mdi/js";
-
-const emit = defineEmits(["tritone-swap-toggled"]);
+import { mdiInformation } from "@mdi/js";
 
 const props = defineProps({
   item: {
     type: Object,
     required: true,
-    default: () => ({
-      chord: "N/A",
-      found_numeral: "?",
-      is_diatonic: true,
-      expected_chord_name: "",
-      expected_numeral: "",
-    }),
   },
-  analysisResults: {
+  analysis: {
     type: Object,
     required: true,
-    default: () => ({ borrowed_chords: {}, tritone_substitution: {} }),
+  },
+  currentIndex: {
+    type: Number,
+    required: true,
+  },
+  // NOUVELLE PROP: Reçoit l'état depuis le composant parent
+  isTritoneModeActive: {
+    type: Boolean,
+    required: true,
   },
 });
 
 const isFlipped = ref(false);
-// NEW: État pour gérer l'affichage de la substitution tritonique
-const isShowingTritone = ref(false);
 
 const toggleCardFlip = () => {
   isFlipped.value = !isFlipped.value;
 };
 
-const toggleTritoneSwap = () => {
-  isShowingTritone.value = !isShowingTritone.value;
-  emit("tritone-swap-toggled", isShowingTritone.value);
-};
-// NEW: Propriété calculée qui récupère les données de la substitution si elle existe
 const tritoneSubstitutionData = computed(() => {
-  // 1. Récupère le tableau des substitutions depuis les props.
-  const substitutions = props.analysisResults.tritone_substitutions;
-
-  // 2. Sécurité : s'assure que les données sont bien un tableau avant de continuer.
-  if (!Array.isArray(substitutions)) {
-    return null;
-  }
-
-  // 3. Utilise .find() pour chercher le tableau interne dont le premier élément (sub[0])
-  //    correspond à l'accord de la carte actuelle (props.item.chord).
+  const substitutions = props.analysis.result.tritone_substitutions;
+  if (!Array.isArray(substitutions)) return null;
   const foundSub = substitutions.find((sub) => sub[0] === props.item.chord);
-
-  // 4. Vérifie si une substitution a été trouvée ET si le nom de l'accord substitué (foundSub[1]) n'est pas vide.
   if (foundSub && foundSub[1]) {
-    // 5. Construit et retourne un nouvel objet "accord" complet pour la substitution.
-    //    Ceci permet au reste du composant (comme 'displayItem') de fonctionner sans modification.
     return {
-      chord: foundSub[1], // Le nom de l'accord de substitution, ex: 'F7'
-      found_numeral: "subV", // Chiffrage romain standard pour une substitution tritonique
-      is_diatonic: false, // Une substitution tritonique est par nature non diatonique
+      chord: foundSub[1],
+      found_numeral: "subV",
+      is_diatonic: false,
     };
   }
-
-  // 6. Si aucune substitution valide n'est trouvée, retourne null.
   return null;
 });
 
-const displayItem = computed(() => {
-  if (isShowingTritone.value && tritoneSubstitutionData.value) {
-    return tritoneSubstitutionData.value;
+const isTritoneSwapContextuallyValid = computed(() => {
+  if (!tritoneSubstitutionData.value) {
+    return false;
   }
-  return props.item;
+
+  const progression = props.analysis.progression;
+  const quality_analysis = props.analysis.result.quality_analysis;
+  if (!quality_analysis || !progression || progression.length === 0) {
+    return false;
+  }
+
+  const nextIndex = (props.currentIndex + 1) % progression.length;
+  const nextChordData = progression[nextIndex];
+  if (!nextChordData) return false;
+
+  const nextChordAnalysis = quality_analysis.find(
+    (entry) => entry.chord === `${nextChordData.root}${nextChordData.quality}`
+  );
+  if (!nextChordAnalysis?.found_numeral || !nextChordAnalysis.is_diatonic) {
+    return false;
+  }
+
+  const allowedCadences = ["I", "i", "VI", "vi"];
+  const baseNumeral = nextChordAnalysis.found_numeral
+    .trim()
+    .match(/^[ivIV]+/u)?.[0];
+  if (!baseNumeral) return false;
+
+  return allowedCadences.includes(baseNumeral);
+});
+
+/**
+ * NOUVEAU : C'est la propriété clé qui contrôle l'affichage.
+ * Elle est vraie uniquement si le mode global est activé ET
+ * si l'accord actuel est contextuellement valide pour un swap.
+ */
+const showDiagonalSplit = computed(() => {
+  return props.isTritoneModeActive && isTritoneSwapContextuallyValid.value;
 });
 
 const shouldShowExpected = computed(() => {
   return (
-    !isShowingTritone.value &&
+    !props.item.is_diatonic &&
     !!props.item.expected_chord_name &&
-    props.item.expected_chord_name !== props.item.chord &&
-    !props.item.is_diatonic
+    props.item.expected_chord_name !== props.item.chord
   );
 });
 
 const borrowedInfo = computed(() => {
-  return props.analysisResults.borrowed_chords?.[displayItem.value.chord];
+  return props.analysis.result.borrowed_chords?.[props.item.chord];
 });
 </script>
 
@@ -276,6 +298,96 @@ const borrowedInfo = computed(() => {
   margin: 0.5rem 0;
 }
 
+.analysis-card.is-split {
+  border-color: #fdcb6e;
+  background: linear-gradient(
+    to top left,
+    rgba(74, 74, 74, 0.5) 0%,
+    rgba(74, 74, 74, 0.5) 49%,
+    #fdcb6e 50%,
+    rgba(60, 60, 60, 0.5) 51%,
+    rgba(60, 60, 60, 0.5) 100%
+  );
+}
+
+.analysis-card.is-split {
+  border-color: #fdcb6e;
+  background: linear-gradient(
+    to top left,
+    rgba(74, 74, 74, 0.5) 0%,
+    rgba(74, 74, 74, 0.5) 49%,
+    #fdcb6e 50%,
+    rgba(60, 60, 60, 0.5) 51%,
+    rgba(60, 60, 60, 0.5) 100%
+  );
+}
+
+.analysis-card.is-split {
+  border-color: #fdcb6e;
+  background: linear-gradient(
+    to top left,
+    rgba(74, 74, 74, 0.5) 0%,
+    rgba(74, 74, 74, 0.5) 49%,
+    #fdcb6e 50%,
+    rgba(60, 60, 60, 0.5) 51%,
+    rgba(60, 60, 60, 0.5) 100%
+  );
+}
+
+.diagonal-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.original-chord-area,
+.tritone-chord-area {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Accord d'origine (G7) --- */
+.original-chord-area {
+  /* MODIFIÉ : Crée le triangle en bas à droite */
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  text-align: right;
+}
+.original-chord-area .card-content {
+  position: absolute;
+  /* MODIFIÉ : Positionne le texte en bas à droite */
+  bottom: 1.5rem;
+  right: 1.5rem;
+}
+
+/* --- Accord de substitution (subV) --- */
+.tritone-chord-area {
+  /* MODIFIÉ : Crée le triangle en haut à gauche */
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  text-align: left;
+}
+.tritone-chord-area .card-content {
+  position: absolute;
+  /* MODIFIÉ : Positionne le texte en haut à gauche */
+  top: 1.5rem;
+  left: 1.5rem;
+}
+
+.original-chord-area .card-content,
+.tritone-chord-area .card-content {
+  justify-content: initial;
+  align-items: initial;
+}
+
+.original-chord-area .chord-name,
+.tritone-chord-area .chord-name,
+.original-chord-area .found-numeral,
+.tritone-chord-area .found-numeral {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
 .flip-button,
 .swap-button {
   position: absolute;

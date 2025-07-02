@@ -111,7 +111,7 @@ async function analyzeProgression() {
 
           <AnalysisGrid
             v-if="analysisResults.quality_analysis"
-            :analysis-results="analysisResults"
+            :analysis="analysisStore.lastAnalysis"
           />
         </div>
       </div>
