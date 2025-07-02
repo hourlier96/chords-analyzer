@@ -16,7 +16,7 @@ from app.utils.common import (
     get_note_from_index,
     get_note_index,
 )
-from app.utils.mode_detection import (
+from app.utils.borrowed_modes import (
     get_borrowed_chords,
 )
 from app.utils.mode_detection_gemini import detect_tonic_and_mode
@@ -50,7 +50,7 @@ def get_all_substitutions(request: ProgressionRequest):
         # Find tonic with IA
         # tonic, mode, explanations = detect_tonic_and_mode(progression)
         tonic = "A"
-        mode = "Harmonic Minor"
+        mode = "Aeolian"
         explanations = "balbla"
         detected_tonic_index = get_note_index(tonic)
 

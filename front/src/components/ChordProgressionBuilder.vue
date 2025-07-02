@@ -129,7 +129,9 @@ const QUALITIES = [
     label: "Accords Suspendus",
     options: [
       { value: "sus2", text: "Suspended 2 (sus2)" },
+      { value: "7sus2", text: "Suspended 2 & 7 minor (7sus2)" },
       { value: "sus4", text: "Suspended 4 (sus4)" },
+      { value: "7sus4", text: "Suspended 4 & 7 minor (7sus4)" },
     ],
   },
 ];

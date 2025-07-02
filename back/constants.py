@@ -1,6 +1,30 @@
 NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+NOTE_INDEX_MAP = {
+    "C": 0,
+    "B#": 0,
+    "C#": 1,
+    "DB": 1,
+    "D": 2,
+    "D#": 3,
+    "EB": 3,
+    "E": 4,
+    "FB": 4,
+    "F": 5,
+    "E#": 5,
+    "F#": 6,
+    "GB": 6,
+    "G": 7,
+    "G#": 8,
+    "AB": 8,
+    "A": 9,
+    "A#": 10,
+    "BB": 10,
+    "B": 11,
+    "CB": 11,
+}
 
 ROMAN_DEGREES = ["I", "II", "III", "IV", "V", "VI", "VII"]
+
 CORE_QUALITIES = {
     # Majeurs
     "": "major",
@@ -33,7 +57,9 @@ CORE_QUALITIES = {
     "aug": "augmented",
     # Suspendus
     "sus2": "suspended",
+    "7sus2": "suspended",
     "sus4": "suspended",
+    "7sus4": "suspended",
 }
 
 CHARACTERISTIC_DEGREES = {
@@ -163,39 +189,3 @@ MELODIC_MINOR_MODES = {
 MODES_DATA.update(MAJOR_MODES_DATA)
 MODES_DATA.update(HARMONIC_MINOR_MODES)
 MODES_DATA.update(MELODIC_MINOR_MODES)
-
-
-# Only used by manual mode detection
-TYPICAL_PATTERNS = {
-    "Ionian": [
-        {"degrees": [0, 2, 5, 3]},  # I-iii-vi-IV
-        {"degrees": [0, 3, 0, 4]},  # I-IV-I-V
-    ],
-    "Dorian": [
-        {"degrees": [0, 3, 0, 6]},  # i-IV-i-VII
-        {"degrees": [0, 3, 0, 4]},  # i-IV-i-V
-        {"degrees": [0, 3, 4, 6]},  # i-IV-V-VII
-        {"degrees": [0, 3, 5, 4]},  # i-IV-VI-V
-    ],
-    "Phrygian": [
-        {"degrees": [0, 3, 1, 0]},  # i-iv-ii-i
-        {"degrees": [0, 1, 2, 1]},  # i-ii°-III-I
-    ],
-    "Lydian": [
-        {"degrees": [0, 4, 5, 1]},  # I-V-VI-II
-        {"degrees": [0, 3, 1, 4]},  # I-IV-ii-V
-        {"degrees": [0, 1, 2, 5]},  # I-II-III-VI
-        {"degrees": [0, 3, 5, 2]},  # I-IV-VI-III
-    ],
-    "Mixolydian": [
-        {"degrees": [0, 3, 6]},  # I-IV-VII
-        {"degrees": [0, 3, 0, 4]},  # I-IV-I-V
-        {"degrees": [0, 3, 6, 5]},  # I-IV-bVII-bVI
-        {"degrees": [0, 6, 3, 0]},  # I-bVII-III-I
-    ],
-    "Aeolian": [
-        {"degrees": [0, 1, 4]},  # i-ii-v
-        {"degrees": [0, 3, 0, 6]},  # i-iv-i-VII
-        {"degrees": [0, 3, 6, 5]},  # i-iv-bVII-VI
-    ],
-}
