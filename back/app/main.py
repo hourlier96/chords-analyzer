@@ -49,8 +49,8 @@ def get_all_substitutions(request: ProgressionRequest):
     try:
         # Find tonic with IA
         # tonic, mode, explanations = detect_tonic_and_mode(progression)
-        tonic = "A"
-        mode = "Aeolian"
+        tonic = "C"
+        mode = "Ionian"
         explanations = "balbla"
         detected_tonic_index = get_note_index(tonic)
 

@@ -192,7 +192,7 @@ def get_chord_notes(chord_name: str) -> list[str] | None:
     """
     # Formules d'accords (intervalles en demi-tons depuis la racine)
     CHORD_FORMULAS = {
-        # Triades de base
+        # --- Triades de base ---
         "": [0, 4, 7],  # Majeur (ex: C)
         "M": [0, 4, 7],  # Majeur (ex: CM)
         "m": [0, 3, 7],  # mineur (ex: Cm)
@@ -200,20 +200,35 @@ def get_chord_notes(chord_name: str) -> list[str] | None:
         "dim": [0, 3, 6],  # diminué (ex: Cdim)
         "d": [0, 3, 6],
         "aug": [0, 4, 8],  # augmenté (ex: Caug)
-        # Accords suspendus
+        # --- Accords suspendus ---
         "sus2": [0, 2, 7],
         "sus4": [0, 5, 7],
-        # Accords de 7ème
+        "7sus2": [0, 2, 7, 10],
+        "7sus4": [0, 5, 7, 10],
+        # --- Accords de 7ème ---
         "7": [0, 4, 7, 10],  # 7e de dominante
         "maj7": [0, 4, 7, 11],  # 7e majeure
         "m7": [0, 3, 7, 10],  # 7e mineure
         "dim7": [0, 3, 6, 9],  # 7e diminuée
-        "m7b5": [0, 3, 6, 8],  # 7e mineure quinte bémol (demi-diminué)
+        "m7b5": [0, 3, 6, 10],  # 7e mineure quinte bémol (demi-diminué)
         "m(maj7)": [0, 3, 7, 11],  # mineur 7e majeure
         "maj7#5": [0, 4, 8, 11],
-        # Accords de 7ème suspendus
-        "7sus2": [0, 2, 7, 10],
-        "7sus4": [0, 5, 7, 10],
+        # --- Accords de 6ème ---
+        "m6": [0, 3, 7, 9],  # mineur 6
+        # --- Accords de 9ème ---
+        "maj9": [0, 4, 7, 11, 14],  # Majeur 9
+        "m9": [0, 3, 7, 10, 14],  # mineur 9
+        "7b9": [0, 4, 7, 10, 13],  # Dominant 7 bémol 9
+        "7#9": [0, 4, 7, 10, 15],  # Dominant 7 dièse 9
+        # --- Accords de 11ème ---
+        # Note: La 3ce est souvent omise dans les accords de 11e, mais incluse ici pour l'analyse complète
+        "m11": [0, 3, 7, 10, 14, 17],  # mineur 11
+        # --- Accords de 13ème ---
+        # Note: La 11e est souvent omise, mais incluse ici.
+        "13": [0, 4, 7, 10, 14, 21],  # Dominant 13
+        # --- Accords de dominante altérés ---
+        "7b5": [0, 4, 6, 10],  # Dominant 7 bémol 5
+        "7#5": [0, 4, 8, 10],  # Dominant 7 dièse 5
     }
 
     # 1. Analyser la racine et la qualité

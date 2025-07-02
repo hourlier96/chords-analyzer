@@ -151,3 +151,53 @@ def test_get_borrowed_with_no_borrowed_chords():
     ]
     result = get_borrowed_chords(analysis, "G", "Mixolydian")
     assert result == {}
+
+
+def test_get_borrowed_chords_in_c_ionian():
+    """
+    Teste une série d'emprunts complexes dans une tonalité de Do Majeur (Ionian)
+    pour vérifier que les modes d'origine corrects sont identifiés.
+    """
+    analysis = [
+        # Dm9 est diatonique en Mixolydian (en plus de Ionian)
+        {
+            "chord": "Dm9",
+            "is_diatonic": False,
+        },
+        # Fm9 est diatonique à plusieurs modes mineurs
+        {
+            "chord": "Fm9",
+            "is_diatonic": False,
+        },
+        # Dm7b5 est le ii de plusieurs modes mineurs
+        {
+            "chord": "Dm7b5",
+            "is_diatonic": False,
+        },
+        {
+            "chord": "Cmaj7",
+            "is_diatonic": True,
+        },
+    ]
+    result = get_borrowed_chords(analysis, "C", "Ionian")
+
+    # Dictionnaire attendu mis à jour avec les résultats corrects de l'analyse par notes
+    expected = {
+        "Dm9": ["Mixolydian", "Ionian #5"],
+        "Fm9": ["Aeolian", "Harmonic Minor", "Phrygian"],
+        "Dm7b5": [
+            "Aeolian",
+            "Locrian ♮2",
+            "Mixolydian b6",
+            "Harmonic Minor",
+            "Ionian #5",
+        ],
+    }
+
+    for key in expected:
+        expected[key].sort()
+    for key in result:
+        result[key].sort()
+
+    # Tri des listes pour une comparaison fiable et indépendante de l'ordre
+    assert result == expected
