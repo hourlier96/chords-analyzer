@@ -1,5 +1,6 @@
 <template>
   <div class="analysis-card-container">
+    <PlayButton :chord="extractChordComponents(item)" :piano="props.piano" />
     <div
       v-if="
         showSecondaryDominant && secondaryDominantChord && !showSubstitution
@@ -86,8 +87,10 @@
 <script setup>
 import { ref, computed } from "vue";
 import { mdiInformation } from "@mdi/js";
+import PlayButton from "@/components/common/PlayButton.vue";
 
 const props = defineProps({
+  piano: { type: Object, required: true },
   item: {
     type: Object,
     required: true,
@@ -189,6 +192,19 @@ const shouldShowExpected = computed(() => {
 const borrowedInfo = computed(() => {
   return props.analysis.result.borrowed_chords?.[props.item.chord];
 });
+
+function extractChordComponents(data) {
+  const chord = data.chord || "";
+
+  // Regex pour extraire la tonique (A-G avec # ou b) + qualité
+  const match = chord.match(/^([A-G][b#]?)(.*)$/);
+  if (!match) {
+    return { root: null, quality: null };
+  }
+
+  const [, root, quality] = match;
+  return { root, quality };
+}
 </script>
 
 <style scoped>

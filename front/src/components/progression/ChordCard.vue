@@ -1,16 +1,6 @@
 <template>
   <div class="chord-slot">
-    <button class="listen-button" @click.stop="playArpeggio">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        width="20"
-        height="20"
-      >
-        <path d="M8 5v14l11-7z" />
-      </svg>
-    </button>
+    <PlayButton :chord="chord" :piano="piano" />
 
     <button class="chord-button" @click="$emit('start-editing')">
       {{ chordDisplayName }}
@@ -58,8 +48,8 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { QUALITIES, NOTES, CHORD_FORMULAS } from "@/constants.js";
-import * as Tone from "tone";
+import { QUALITIES, NOTES } from "@/constants.js";
+import PlayButton from "@/components/common/PlayButton.vue";
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -74,7 +64,6 @@ const emit = defineEmits([
   "stop-editing",
 ]);
 
-// Crée une copie locale pour les modifications internes
 const chord = computed({
   get: () => props.modelValue,
   set: (newValue) => {
@@ -84,19 +73,16 @@ const chord = computed({
 
 const activeQualityCategory = ref(null);
 
-// Nom d'affichage de l'accord
 const chordDisplayName = computed(() => {
   return `${chord.value.root}${chord.value.quality}`;
 });
 
-// Options de qualité d'accord basées sur la catégorie active
 const activeQualityOptions = computed(() => {
   if (!activeQualityCategory.value) return [];
   const group = QUALITIES.find((g) => g.label === activeQualityCategory.value);
   return group ? group.options : [];
 });
 
-// Initialise la catégorie de qualité lorsque l'édition commence
 watch(
   () => props.isEditing,
   (isEditing) => {
@@ -113,7 +99,7 @@ watch(
       activeQualityCategory.value =
         foundCategory || (QUALITIES.length > 0 ? QUALITIES[0].label : null);
     } else if (!isEditing) {
-      activeQualityCategory.value = null; // Réinitialiser lorsque l'édition s'arrête
+      activeQualityCategory.value = null;
     }
   }
 );
@@ -122,55 +108,10 @@ function updateChord(key, value) {
   emit("update:modelValue", { ...chord.value, [key]: value });
 }
 
-// Fonction pour obtenir les notes de l'accord
-const ALL_NOTES_FLAT = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
-function getNotesForChord(octave = 4) {
-  const intervals = CHORD_FORMULAS[chord.value.quality];
-  if (!intervals) return [];
-
-  const rootIndex = ALL_NOTES_FLAT.indexOf(chord.value.root);
-  if (rootIndex === -1) return [];
-
-  return intervals.map((interval) => {
-    const noteIndex = (rootIndex + interval) % 12;
-    const currentOctave = octave + Math.floor((rootIndex + interval) / 12);
-    return `${ALL_NOTES_FLAT[noteIndex]}${currentOctave}`;
-  });
-}
-
-// Fonction pour jouer l'accord en arpège
-async function playArpeggio() {
-  if (Tone.getContext().state !== "running") {
-    await Tone.start();
-  }
-  props.piano.releaseAll();
-  const notes = getNotesForChord();
-
-  if (notes.length > 0) {
-    const now = Tone.now();
-    notes.forEach((note, index) => {
-      props.piano.triggerAttackRelease(note, "0.5s", now + index * 0.12);
-    });
-  }
-}
+// Les fonctions playArpeggio() et getNotesForChord() ont été retirées d'ici.
 </script>
 
 <style scoped>
-/* Les styles de .chord-slot, .chord-button, .remove-button, .listen-button, .editor-popover, etc. vont ici */
-/* (Copiez-collez les styles pertinents depuis votre fichier d'origine) */
 .chord-slot {
   position: relative;
   cursor: grab;
@@ -206,26 +147,7 @@ async function playArpeggio() {
   justify-content: center;
   line-height: 1;
 }
-.listen-button {
-  position: absolute;
-  bottom: -10px;
-  left: -10px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: none;
-  background-color: #007bff;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5;
-  transition: background-color 0.2s;
-}
-.listen-button:hover {
-  background-color: #0056b3;
-}
+
 .editor-popover {
   position: absolute;
   top: calc(100% + 10px);

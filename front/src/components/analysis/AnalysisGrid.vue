@@ -65,6 +65,7 @@
         class="chord-progression-group"
       >
         <AnalysisCard
+          :piano="props.piano"
           :item="item"
           :analysis="analysis"
           :current-index="index"
@@ -79,7 +80,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import AnalysisCard from "@/components/AnalysisCard.vue";
+import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
 import { mdiYinYang, mdiSync } from "@mdi/js";
 
 const props = defineProps({
@@ -87,6 +88,7 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  piano: { type: Object, required: true },
 });
 
 const showSecondaryDominants = ref(false);
