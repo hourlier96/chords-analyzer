@@ -148,14 +148,23 @@ function getNotesForChord(chord) {
   });
 }
 
-// 1. Créer une réverbération pour donner de l'espace au son du piano
+const compressor = new Tone.Compressor({
+  threshold: -12, // Le seuil à partir duquel la compression s'active
+  ratio: 4, // Le ratio de compression (4:1)
+}).toDestination();
+
+const eq = new Tone.EQ3({
+  low: -2, // Baisser un peu les basses pour éviter un son boueux
+  mid: 0,
+  high: 2, // Augmenter les aigus pour plus de brillance
+});
 const reverb = new Tone.Reverb({
   decay: 2.5, // La queue de la réverbération
   wet: 0.3, // La quantité d'effet (0 à 1)
   preDelay: 0.01,
 }).toDestination();
 
-const playbackMode = ref("arpeggio");
+const playbackMode = ref("chords");
 
 const piano = new Tone.Sampler({
   urls: {
@@ -184,7 +193,7 @@ const piano = new Tone.Sampler({
   },
   release: 1.2,
   baseUrl: "https://tonejs.github.io/audio/salamander/",
-}).chain(reverb);
+}).chain(eq, compressor, reverb);
 
 /**
  * Sets the playback mode for the piano.
@@ -217,8 +226,11 @@ piano.playArpeggio = function (chord) {
   const notes = getNotesForChord(chord);
   if (notes.length > 0) {
     const now = Tone.now();
+    const baseVelocity = 0.6;
+    const velocityIncrement = 0.1;
     notes.forEach((note, index) => {
-      this.triggerAttackRelease(note, "0.5s", now + index * 0.12);
+      const velocity = Math.min(1.0, baseVelocity + index * velocityIncrement);
+      this.triggerAttackRelease(note, "0.5s", now + index * 0.12, velocity);
     });
   }
 };

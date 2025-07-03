@@ -5,15 +5,25 @@
   >
     <div class="analysis-header">
       <div class="header-controls">
-        <v-tooltip location="top" text="Lire la progression">
+        <v-tooltip v-if="!isPlaying" location="top" text="Lire la progression">
           <template #activator="{ props }">
             <button
               v-bind="props"
               @click="playEntireProgression"
               class="control-icon-button"
-              :disabled="isPlaying"
             >
               <v-icon :icon="mdiPlay" />
+            </button>
+          </template>
+        </v-tooltip>
+        <v-tooltip v-else location="top" text="Stopper la lecture">
+          <template #activator="{ props }">
+            <button
+              v-bind="props"
+              @click="stopSound()"
+              class="control-icon-button"
+            >
+              <v-icon :icon="mdiStop" />
             </button>
           </template>
         </v-tooltip>
@@ -30,7 +40,6 @@
             </button>
           </template>
         </v-tooltip>
-
         <v-tooltip location="top" text="Substitutions modales">
           <template #activator="{ props: tooltipProps }">
             <v-menu location="bottom">
@@ -38,21 +47,33 @@
                 <button
                   v-bind="{ ...tooltipProps, ...menuProps }"
                   class="control-icon-button"
-                  :class="{ 'is-active': activeMode !== 'Ionian (Original)' }"
+                  :class="{ 'is-active': activeMode }"
                 >
                   <v-icon :icon="mdiSync" />
                 </button>
               </template>
-              <v-list density="compact">
+              <v-list density="compact" class="modal-list">
                 <v-list-item
                   v-for="option in modeOptions"
                   :key="option.value"
                   @click="activeMode = option.value"
+                  :class="{ 'is-active': activeMode === option.value }"
                 >
                   <v-list-item-title>{{ option.title }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
+          </template>
+        </v-tooltip>
+        <v-tooltip v-if="activeMode" location="top" text="Réinitialiser">
+          <template #activator="{ props }">
+            <button
+              v-bind="props"
+              @click="resetActiveMode()"
+              class="reset-mode-button"
+            >
+              <v-icon :icon="mdiClose" size="x-small"></v-icon>
+            </button>
           </template>
         </v-tooltip>
       </div>
@@ -63,6 +84,7 @@
         v-for="(item, index) in displayedProgression"
         :key="`${activeMode}-${index}`"
         class="chord-progression-group"
+        :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
       >
         <AnalysisCard
           :piano="props.piano"
@@ -81,7 +103,7 @@
 import { ref, computed } from "vue";
 import * as Tone from "tone";
 import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
-import { mdiSync, mdiPlay } from "@mdi/js";
+import { mdiSync, mdiPlay, mdiStop, mdiClose } from "@mdi/js";
 
 const props = defineProps({
   analysis: {
@@ -92,8 +114,9 @@ const props = defineProps({
 });
 
 const showSecondaryDominants = ref(false);
-const activeMode = ref("Ionian (Original)");
+const activeMode = ref(null);
 const isPlaying = ref(false);
+const currentlyPlayingIndex = ref(null);
 
 const modeOptions = computed(() => {
   if (!props.analysis.result?.major_modes_substitutions) {
@@ -110,7 +133,7 @@ const modeOptions = computed(() => {
 const displayedProgression = computed(() => {
   if (!props.analysis.result) return [];
   const originalProgression = props.analysis.result.quality_analysis;
-  if (activeMode.value === "Ionian (Original)" || !activeMode.value) {
+  if (!activeMode.value) {
     return originalProgression;
   }
   const modeData =
@@ -164,8 +187,11 @@ const playEntireProgression = async () => {
   isPlaying.value = true;
 
   try {
-    for (const item of displayedProgression.value) {
+    for (const [index, item] of displayedProgression.value.entries()) {
+      if (!isPlaying.value) break;
       if (!item.chord) continue;
+
+      currentlyPlayingIndex.value = index;
 
       const parseChordString = (chordStr) => {
         const rootMatch = chordStr.match(/^[A-G][#b]?/);
@@ -192,12 +218,23 @@ const playEntireProgression = async () => {
       }
       await sleep(1000);
     }
+    currentlyPlayingIndex.value = null;
   } catch (error) {
     console.error("Error during playback:", error);
   } finally {
     isPlaying.value = false;
   }
 };
+
+function stopSound() {
+  isPlaying.value = false;
+  props.piano.releaseAll();
+  currentlyPlayingIndex.value = null;
+}
+
+function resetActiveMode() {
+  activeMode.value = null;
+}
 </script>
 
 <style scoped>
@@ -299,6 +336,39 @@ button.control-icon-button:has(.v-icon) {
   background-color: #fdcb6e;
 }
 
+.reset-mode-button {
+  position: relative;
+  top: -5px;
+  right: 21px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #d32f2f;
+  color: white;
+  border: 1px solid #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s;
+}
+
+.reset-mode-button:hover {
+  background-color: #e57373;
+}
+
+.reset-mode-button .v-icon {
+  font-size: 16px;
+  color: white !important; /* Forcer la couleur de l'icône */
+}
+
+.modal-list .is-active {
+  background-color: #6497cc;
+}
+
 .analysis-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -318,5 +388,13 @@ button.control-icon-button:has(.v-icon) {
   display: flex;
   justify-content: center;
   align-items: center;
+  border-radius: 12px; /* Add a radius to the container for the shadow */
+  /* ✨ NEW: Add a transition for the box-shadow property. */
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+/* ✨ NEW: Define the halo effect for the active card. */
+.chord-progression-group.is-playing-halo {
+  box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
 }
 </style>

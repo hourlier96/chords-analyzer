@@ -101,6 +101,7 @@ function updateChord(index, newChord) {
   const newProgression = [...progression.value];
   newProgression[index] = newChord;
   progression.value = newProgression;
+  props.piano.play(newChord);
 }
 
 function startEditing(chord) {

@@ -2,18 +2,13 @@
   <div class="analysis-card-container">
     <PlayButton :chord="extractChordComponents(item)" :piano="props.piano" />
     <div
-      v-if="
-        showSecondaryDominant && secondaryDominantChord && !showSubstitution
-      "
+      v-if="showSecondaryDominant && secondaryDominantChord"
       class="docked-secondary-dominant"
     >
       <div class="chord-name">{{ secondaryDominantChord }}</div>
     </div>
     <div class="card-inner" :class="{ 'is-flipped': isFlipped }">
-      <div
-        class="analysis-card card-front"
-        :class="{ 'is-swapped': showSubstitution }"
-      >
+      <div class="analysis-card card-front">
         <div class="card-content">
           <div class="chord-name">{{ item.chord }}</div>
           <div
