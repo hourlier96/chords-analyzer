@@ -76,22 +76,31 @@ def parse_chord(chord_name):
 def is_dominant_chord(chord_name, parsed_chord=None):
     """
     Vérifie si un accord est un accord de dominante.
-    Un accord est considéré comme dominant s'il a une tierce majeure et une septième mineure.
-    Pour simplifier, on cible les accords majeurs ou '7'.
+    Un accord est considéré comme dominant si sa qualité de base est 'dominant',
+    ou s'il s'agit d'une triade majeure simple (qui peut fonctionner comme un dominant).
     """
     if not parsed_chord:
+        # Note: Assurez-vous que les fonctions parse_chord et _get_core_quality
+        # sont disponibles dans le même scope.
         parsed_chord = parse_chord(chord_name)
     if not parsed_chord:
         return False
 
     _, quality = parsed_chord
     core_quality = _get_core_quality(quality)
-    # Un accord de dominante n'est ni mineur, ni diminué.
-    # On exclut aussi le 'maj7' qui a une septième majeure.
-    if core_quality in ["minor", "diminished", "suspended"] or "maj7" in quality:
-        return False
 
-    return True
+    # 1. Les accords dont la qualité de base est 'dominant' le sont toujours.
+    if core_quality == "dominant":
+        return True
+
+    # 2. Une triade majeure simple (sans extensions comme 6, 9, maj7) peut
+    # fonctionner comme un accord de dominante. Nous acceptons les qualités
+    # qui représentent une triade majeure simple.
+    if core_quality == "major" and quality in ["", "M", "maj"]:
+        return True
+
+    # 3. Tous les autres types d'accords ne sont pas considérés comme dominants.
+    return False
 
 
 # Returns a diatonic 7th chord for a degree and tonic, with optional simplification
@@ -126,6 +135,8 @@ def _get_core_quality(quality):
         return "augmented"
     if "sus" in quality:
         return "suspended"
+    if "5" in quality:
+        return "power"
     return "major"  # fallback
 
 
@@ -183,81 +194,102 @@ def get_scale_notes(key_tonic_str: str, mode_name: str) -> list[str]:
 def get_chord_notes(chord_name: str) -> list[str] | None:
     """
     Analyse un nom d'accord et renvoie ses notes constitutives.
+    Cette version est autonome et définit ses propres constantes pour éviter
+    les problèmes d'environnement.
 
     Args:
-        chord_name (str): Le nom de l'accord (ex: "C", "F#m7", "Gbsus4").
+        chord_name (str): Le nom de l'accord (ex: "C6", "F#m7", "Bb").
 
     Returns:
         list[str] | None: Une liste de notes ou None si l'accord est invalide.
     """
-    # Formules d'accords (intervalles en demi-tons depuis la racine)
+
     CHORD_FORMULAS = {
         # --- Triades de base ---
-        "": [0, 4, 7],  # Majeur (ex: C)
-        "M": [0, 4, 7],  # Majeur (ex: CM)
-        "m": [0, 3, 7],  # mineur (ex: Cm)
+        "": [0, 4, 7],
+        "M": [0, 4, 7],
+        "maj": [0, 4, 7],
+        "m": [0, 3, 7],
         "min": [0, 3, 7],
-        "dim": [0, 3, 6],  # diminué (ex: Cdim)
+        "dim": [0, 3, 6],
         "d": [0, 3, 6],
-        "aug": [0, 4, 8],  # augmenté (ex: Caug)
+        "aug": [0, 4, 8],
+        "+": [0, 4, 8],
+        "5": [0, 7],
         # --- Accords suspendus ---
         "sus2": [0, 2, 7],
         "sus4": [0, 5, 7],
         "7sus2": [0, 2, 7, 10],
         "7sus4": [0, 5, 7, 10],
-        # --- Accords de 7ème ---
-        "7": [0, 4, 7, 10],  # 7e de dominante
-        "maj7": [0, 4, 7, 11],  # 7e majeure
-        "m7": [0, 3, 7, 10],  # 7e mineure
-        "dim7": [0, 3, 6, 9],  # 7e diminuée
-        "m7b5": [0, 3, 6, 10],  # 7e mineure quinte bémol (demi-diminué)
-        "m(maj7)": [0, 3, 7, 11],  # mineur 7e majeure
-        "maj7#5": [0, 4, 8, 11],
+        "9sus4": [0, 5, 7, 10, 14],
+        # --- Accords "add" ---
+        "add9": [0, 4, 7, 14],
+        "m(add9)": [0, 3, 7, 14],
         # --- Accords de 6ème ---
-        "m6": [0, 3, 7, 9],  # mineur 6
-        # --- Accords de 9ème ---
-        "maj9": [0, 4, 7, 11, 14],  # Majeur 9
-        "m9": [0, 3, 7, 10, 14],  # mineur 9
-        "7b9": [0, 4, 7, 10, 13],  # Dominant 7 bémol 9
-        "7#9": [0, 4, 7, 10, 15],  # Dominant 7 dièse 9
-        # --- Accords de 11ème ---
-        # Note: La 3ce est souvent omise dans les accords de 11e, mais incluse ici pour l'analyse complète
-        "m11": [0, 3, 7, 10, 14, 17],  # mineur 11
-        # --- Accords de 13ème ---
-        # Note: La 11e est souvent omise, mais incluse ici.
-        "13": [0, 4, 7, 10, 14, 21],  # Dominant 13
+        "6": [0, 4, 7, 9],
+        "m6": [0, 3, 7, 9],
+        "6/9": [0, 4, 7, 9, 14],
+        # --- Accords de 7ème ---
+        "7": [0, 4, 7, 10],
+        "maj7": [0, 4, 7, 11],
+        "m7": [0, 3, 7, 10],
+        "dim7": [0, 3, 6, 9],
+        "m7b5": [0, 3, 6, 10],
+        "m(maj7)": [0, 3, 7, 11],
+        "maj7#5": [0, 4, 8, 11],
         # --- Accords de dominante altérés ---
-        "7b5": [0, 4, 6, 10],  # Dominant 7 bémol 5
-        "7#5": [0, 4, 8, 10],  # Dominant 7 dièse 5
+        "7b5": [0, 4, 6, 10],
+        "7#5": [0, 4, 8, 10],
+        "7b9": [0, 4, 7, 10, 13],
+        "7#9": [0, 4, 7, 10, 15],
+        "7#11": [0, 4, 7, 10, 18],
+        "7alt": [0, 4, 10, 13, 18],  # Altéré générique : b9 et #11
+        "7b9b5": [0, 4, 6, 10, 13],
+        "7b9#5": [0, 4, 8, 10, 13],
+        "7#9b5": [0, 4, 6, 10, 15],
+        "7#9#5": [0, 4, 8, 10, 15],
+        "7b9#9": [0, 4, 7, 10, 13, 15],  # double altération de la 9e
+        "7b9#11": [0, 4, 7, 10, 13, 18],
+        "7#9#11": [0, 4, 7, 10, 15, 18],
+        "7b9b13": [0, 4, 7, 10, 13, 20],  # b13 = A# = +20 demi-tons
+        "7#9b13": [0, 4, 7, 10, 15, 20],
+        # --- Accords de 9ème ---
+        "9": [0, 4, 7, 10, 14],
+        "maj9": [0, 4, 7, 11, 14],
+        "m9": [0, 3, 7, 10, 14],
+        # --- Accords de 11ème ---
+        "11": [0, 4, 7, 10, 14, 17],
+        "m11": [0, 3, 7, 10, 14, 17],
+        # --- Accords de 13ème ---
+        "13": [0, 4, 7, 10, 14, 21],
+        "m13": [0, 3, 7, 10, 14, 21],
+        "maj13": [0, 4, 7, 11, 14, 21],
     }
 
-    # 1. Analyser la racine et la qualité
-    root, quality = "", ""
-    if len(chord_name) > 1 and chord_name[1] in ("#", "b"):
-        root = chord_name[:2]
-        quality = chord_name[2:]
-    else:
-        root = chord_name[0]
-        quality = chord_name[1:]
+    # Trier les qualités de la plus longue à la plus courte pour une analyse correcte
+    KNOWN_QUALITIES = sorted(CHORD_FORMULAS.keys(), key=len, reverse=True)
 
-    # Normaliser la racine pour la recherche
-    root_normalized = root.upper()
-    if root_normalized not in NOTE_INDEX_MAP:
-        return None  # Racine invalide
+    # --- Logique de la fonction ---
+    chord_name = chord_name.strip()
 
-    if quality not in CHORD_FORMULAS:
-        return None  # Qualité d'accord non supportée
+    # 1. Itérer sur les qualités connues pour trouver la bonne correspondance
+    for quality in KNOWN_QUALITIES:
+        if chord_name.endswith(quality):
+            # Extraire la partie racine potentielle
+            root_str = chord_name[: -len(quality)] if quality else chord_name
+            if root_str in NOTE_INDEX_MAP:
+                root_index = NOTE_INDEX_MAP[root_str]
 
-    # 2. Construire les notes de l'accord
-    tonic_index = NOTE_INDEX_MAP[root_normalized]
-    intervals = CHORD_FORMULAS[quality]
+                # Construire les notes de l'accord
+                intervals = CHORD_FORMULAS[quality]
+                chord_notes = []
+                for interval in intervals:
+                    note_index = (root_index + interval) % 12
+                    chord_notes.append(NOTES[note_index])
+                return chord_notes
 
-    chord_notes = []
-    for interval in intervals:
-        note_index = (tonic_index + interval) % 12
-        chord_notes.append(NOTES[note_index])
-
-    return chord_notes
+    # Si aucune correspondance n'est trouvée après la boucle, l'accord est invalide
+    return None
 
 
 def is_chord_diatonic(chord_name: str, key_tonic_str: str, mode_name: str) -> bool:

@@ -56,9 +56,14 @@ def test_get_note_from_index(index, expected_note):
         ("A#", (10, "")),
         ("Cb", (11, "")),
         ("Em", (4, "m")),
-        ("Emin", (4, "min")),  # À normaliser vers "m" ou "min"
+        ("Emin", (4, "min")),
         ("A7", (9, "7")),
         ("Fdim", (5, "dim")),
+        ("C6/9", (0, "6/9")),
+        ("G9", (7, "9")),
+        ("F#11", (6, "11")),
+        ("D5", (2, "5")),
+        ("Cadd9", (0, "add9")),
         ("123", None),
     ],
 )
@@ -71,11 +76,28 @@ def test_parse_chord(chord_name, expected_tuple):
     [
         ("G7", True),
         ("C9", True),
+        ("A13", True),
+        ("F#7#11", True),
+        ("E7alt", True),
+        ("A7b5", True),
+        ("D7#5", True),
+        ("E7b9", True),
+        ("B7#9", True),
+        ("F7b9b5", True),
+        ("C7b9#5", True),
+        ("G7#9b5", True),
+        ("A7#9#5", True),
+        ("E7b9#9", True),
+        ("D7b9#11", True),
+        ("F7#9#11", True),
+        ("C7b9b13", True),
+        ("G7#9b13", True),
         ("A", True),
         ("Cmaj7", False),
         ("Am7", False),
         ("Bdim", False),
         ("Gsus4", False),
+        ("C6/9", False),
     ],
 )
 def test_is_dominant_chord(chord_name, is_dominant):
@@ -110,11 +132,19 @@ def test_get_diatonic_7th_chord(degree, key_tonic_index, mode, expected_chord):
         ("maj9", "major"),
         ("m7", "minor"),
         ("m7b5", "diminished"),
-        ("°", "diminished"),
+        ("dim7", "diminished"),
         ("aug", "augmented"),
-        ("+", "augmented"),
         ("7sus4", "suspended"),
         ("", "major"),
+        ("6", "major"),
+        ("6/9", "major"),
+        ("add9", "major"),
+        ("m13", "minor"),
+        ("9", "dominant"),
+        ("11", "dominant"),
+        ("7alt", "dominant"),
+        ("9sus4", "suspended"),
+        ("5", "power"),
         ("xyz", "major"),  # Fallback
     ],
 )
@@ -126,39 +156,47 @@ def test_get_core_quality(quality, expected_core):
     "chord, key, mode, expected",
     [
         # --- Cas en Do Majeur (C Ionian) ---
-        # Accords diatoniques exacts (devraient être True)
         ("Cmaj7", "C", "Ionian", True),
         ("G7", "C", "Ionian", True),
         ("Am7", "C", "Ionian", True),
         ("Bm7b5", "C", "Ionian", True),
-        # Accords diatoniques simplifiés (triades) (devraient être True)
         ("C", "C", "Ionian", True),
         ("Dm", "C", "Ionian", True),
         ("G", "C", "Ionian", True),
-        # Accords suspendus
         ("Gsus2", "C", "Ionian", True),
         ("Csus4", "C", "Ionian", True),
         ("Bsus2", "C", "Ionian", False),
-        # Racine diatonique, mais mauvaise qualité (devraient être False)
         ("Gmaj7", "C", "Ionian", False),
         ("A7", "C", "Ionian", False),
-        ("Em", "C", "Ionian", True),  # Note: True car 'm' est compatible avec 'm7'
+        ("Em", "C", "Ionian", True),
         ("E7", "C", "Ionian", False),
-        # Racine non diatonique (devraient être False)
         ("F#m7", "C", "Ionian", False),
         ("Db", "C", "Ionian", False),
+        # --- Nouveaux accords étendus en C Majeur ---
+        ("C6", "C", "Ionian", True),
+        ("Cadd9", "C", "Ionian", True),
+        ("G9", "C", "Ionian", True),
+        ("Fmaj9", "C", "Ionian", True),
+        ("Dm11", "C", "Ionian", True),  # D-F-A-C-E-G
+        ("C6/9", "C", "Ionian", True),  # C-E-G-A-D
+        ("G11", "C", "Ionian", True),  # G-B-D-F-A-C
+        ("G5", "C", "Ionian", True),  # Power chord
+        ("Am(add9)", "C", "Ionian", True),  # A-C-E-B
         # --- Cas avec une autre tonalité (Ré majeur) ---
         ("Dmaj7", "D", "Ionian", True),
         ("A7", "D", "Ionian", True),
         ("F#m7", "D", "Ionian", True),
-        # --- Cas avec un autre mode (La mineur harmonique) ---
-        # Note : 'Harmonic Minor' doit être ajouté à MODES_DATA pour que cela fonctionne.
-        ("Am(maj7)", "A", "Harmonic Minor", True),  # Degré i
-        ("Cmaj7#5", "A", "Harmonic Minor", True),  # Degré III
-        ("E7", "A", "Harmonic Minor", True),  # Degré V
-        ("Fmaj7", "A", "Harmonic Minor", True),  # Degré VI
-        ("G#dim7", "A", "Harmonic Minor", True),  # Degré vii
-        ("D7", "A", "Harmonic Minor", False),  # Dm7 est diatonique, pas D7
+        ("G6", "D", "Ionian", True),  # G-B-D-E
+        # --- Cas avec un autre mode ---
+        ("Am(maj7)", "A", "Harmonic Minor", True),
+        ("Cmaj7#5", "A", "Harmonic Minor", True),
+        ("E7", "A", "Harmonic Minor", True),
+        ("Fmaj7", "A", "Harmonic Minor", True),
+        ("G#dim7", "A", "Harmonic Minor", True),
+        ("D7", "A", "Harmonic Minor", False),
+        ("Emaj7", "D", "Lydian", False),
+        ("E7", "D", "Lydian", True),
+        ("A7#11", "A", "Lydian Dominant", True),  # A-C#-E-G-D#
         # --- Cas invalides ---
         ("InvalidChord", "C", "Ionian", False),
         ("Cmaj7", "X", "Ionian", False),

@@ -15,27 +15,40 @@
             <button class="remove-button" @click="removeChord(chord.id)">
               ×
             </button>
+
             <div v-if="editingChordId === chord.id" class="editor-popover">
-              <select v-model="chord.root">
-                <option v-for="note in NOTES" :key="note" :value="note">
+              <select v-model="chord.root" class="root-select">
+                <option
+                  v-for="note in NOTES"
+                  :key="note"
+                  :value="note.split(' / ')[0]"
+                >
                   {{ note }}
                 </option>
               </select>
-              <select v-model="chord.quality">
-                <optgroup
-                  v-for="group in QUALITIES"
-                  :key="group.label"
-                  :label="group.label"
-                >
-                  <option
-                    v-for="option in group.options"
+
+              <div class="quality-selector">
+                <div class="category-tabs">
+                  <button
+                    v-for="group in QUALITIES"
+                    :key="group.label"
+                    @click="activeQualityCategory = group.label"
+                    :class="{ active: activeQualityCategory === group.label }"
+                  >
+                    {{ group.label }}
+                  </button>
+                </div>
+                <div class="options-grid">
+                  <button
+                    v-for="option in activeQualityOptions"
                     :key="option.value"
-                    :value="option.value"
+                    @click="chord.quality = option.value"
+                    :class="{ active: chord.quality === option.value }"
                   >
                     {{ option.text }}
-                  </option>
-                </optgroup>
-              </select>
+                  </button>
+                </div>
+              </div>
               <button @click="stopEditing" class="close-editor">OK</button>
             </div>
           </div>
@@ -54,13 +67,27 @@
         "
       >
         <template v-if="isLoading">
-          <v-progress-circular
-            indeterminate
-            size="20"
-            width="2"
-            color="primary"
-            class="mr-2"
-          ></v-progress-circular>
+          <!-- Remplacé v-progress-circular par une animation SVG pour la compatibilité -->
+          <svg
+            class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
           Analyse en cours...
         </template>
         <template v-else> Analyser la Progression </template>
@@ -94,57 +121,79 @@ const NOTES = [
 ];
 const QUALITIES = [
   {
-    label: "Accords Majeurs",
+    label: "Majeurs",
     options: [
       { value: "", text: "Majeur" },
+      { value: "6", text: "Majeur 6" },
       { value: "maj7", text: "Majeur 7" },
-      { value: "maj7#5", text: "Majeur 7#5 (Maj7+5)" },
-      { value: "maj9", text: "Majeur 9 (Maj9)" },
+      { value: "add9", text: "Add 9" },
+      { value: "6/9", text: "Majeur 6/9" },
+      { value: "maj9", text: "Majeur 9" },
+      { value: "maj13", text: "Majeur 13" },
+      { value: "maj7#5", text: "Majeur 7#5" },
     ],
   },
   {
-    label: "Accords Mineurs",
+    label: "Mineurs",
     options: [
       { value: "m", text: "Mineur" },
+      { value: "m6", text: "Mineur 6" },
       { value: "m7", text: "Mineur 7" },
-      { value: "m(maj7)", text: "Mineur Majeur 7 (mMaj7)" },
-      { value: "m6", text: "Mineur 6 (m6)" },
-      { value: "m9", text: "Mineur 9 (m9)" },
-      { value: "m11", text: "Mineur 11 (m11)" },
+      { value: "m(maj7)", text: "m(maj7)" },
+      { value: "m(add9)", text: "m(add9)" },
+      { value: "m9", text: "Mineur 9" },
+      { value: "m11", text: "Mineur 11" },
+      { value: "m13", text: "Mineur 13" },
     ],
   },
   {
-    label: "Accords de Dominante",
+    label: "Dominante",
     options: [
-      { value: "7", text: "Dominant 7" },
-      { value: "7b5", text: "Dominant 7♭5" },
-      { value: "7#5", text: "Dominant 7♯5" },
-      { value: "7b9", text: "Dominant 7♭9" },
-      { value: "7#9", text: "Dominant 7♯9" },
-      { value: "13", text: "Dominant 13" },
+      { value: "7", text: "Dom 7" },
+      { value: "9", text: "Dom 9" },
+      { value: "11", text: "Dom 11" },
+      { value: "13", text: "Dom 13" },
+      { value: "7b5", text: "7♭5" },
+      { value: "7#5", text: "7♯5" },
+      { value: "7b9", text: "7♭9" },
+      { value: "7#9", text: "7♯9" },
+      { value: "7#11", text: "7♯11" },
     ],
   },
   {
-    label: "Accords Diminués",
+    label: "Altérés",
     options: [
-      { value: "m7b5", text: "Demi-diminué (m7b5)" },
-      { value: "dim", text: "Diminué (triade)" },
-      { value: "dim7", text: "Diminué 7 (o7)" },
+      { value: "7b9b5", text: "7♭9♭5" },
+      { value: "7b9#5", text: "7♭9♯5" },
+      { value: "7#9b5", text: "7♯9♭5" },
+      { value: "7#9#5", text: "7♯9♯5" },
+      { value: "7b9#9", text: "7♭9♯9" },
+      { value: "7b9#11", text: "7♭9♯11" },
+      { value: "7#9#11", text: "7♯9♯11" },
+      { value: "7b9b13", text: "7♭9♭13" },
+      { value: "7#9b13", text: "7♯9♭13" },
     ],
   },
   {
-    label: "Accords Augmentés",
-    options: [{ value: "aug", text: "Augmenté (#5)" }],
-  },
-  {
-    label: "Accords Suspendus",
+    label: "Suspendus",
     options: [
-      { value: "sus2", text: "Suspended 2 (sus2)" },
-      { value: "7sus2", text: "Suspended 2 & 7 minor (7sus2)" },
-      { value: "sus4", text: "Suspended 4 (sus4)" },
-      { value: "7sus4", text: "Suspended 4 & 7 minor (7sus4)" },
+      { value: "sus2", text: "sus2" },
+      { value: "sus4", text: "sus4" },
+      { value: "7sus2", text: "7sus2" },
+      { value: "7sus4", text: "7sus4" },
+      { value: "9sus4", text: "9sus4" },
     ],
   },
+  {
+    label: "Diminués",
+    options: [
+      { value: "dim", text: "Diminué" },
+      { value: "m7b5", text: "m7b5" },
+      { value: "dim7", text: "Diminué 7" },
+    ],
+  },
+  { label: "Augmentés", options: [{ value: "aug", text: "Augmenté" }] },
+  { label: "Autres", options: [{ value: "5", text: "Power Chord" }] },
 ];
 
 const props = defineProps({
@@ -156,6 +205,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "analyze"]);
 
 const editingChordId = ref(null);
+const activeQualityCategory = ref(null);
 
 const progression = computed({
   get: () => props.modelValue,
@@ -164,10 +214,15 @@ const progression = computed({
   },
 });
 
+const activeQualityOptions = computed(() => {
+  if (!activeQualityCategory.value) return [];
+  const group = QUALITIES.find((g) => g.label === activeQualityCategory.value);
+  return group ? group.options : [];
+});
+
 const isProgressionUnchanged = computed(() => {
-  if (!analysisStore.lastAnalysis.progression || !analysisStore.hasResult) {
+  if (!analysisStore.lastAnalysis.progression || !analysisStore.hasResult)
     return false;
-  }
   return (
     JSON.stringify(progression.value) ===
     JSON.stringify(analysisStore.lastAnalysis.progression)
@@ -189,20 +244,26 @@ function removeChord(chordId) {
 
 function startEditing(chord) {
   editingChordId.value = chord.id;
+  let foundCategory = null;
+  if (chord.quality !== null) {
+    for (const group of QUALITIES) {
+      if (group.options.some((opt) => opt.value === chord.quality)) {
+        foundCategory = group.label;
+        break;
+      }
+    }
+  }
+  activeQualityCategory.value =
+    foundCategory || (QUALITIES.length > 0 ? QUALITIES[0].label : null);
 }
 
 function stopEditing() {
   editingChordId.value = null;
+  activeQualityCategory.value = null;
 }
 
 function getChordDisplayName(chord) {
-  for (const group of QUALITIES) {
-    const quality = group.options.find((q) => q.value === chord.quality);
-    if (quality) {
-      return `${chord.root}${quality.value}`;
-    }
-  }
-  return chord.root;
+  return `${chord.root}${chord.quality}`;
 }
 
 function onAnalyze() {
@@ -217,31 +278,26 @@ function onAnalyze() {
   border-radius: 8px;
   margin-bottom: 2rem;
 }
-
 .progression-builder {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
 }
-
 .draggable-container {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
 }
-
 .chord-slot {
   position: relative;
   cursor: grab;
 }
-
 .ghost {
   opacity: 0.5;
   background: #4a4a4a;
   border: 2px dashed #007bff;
 }
-
 .chord-button {
   padding: 1rem 1.5rem;
   font-size: 1.5rem;
@@ -253,11 +309,9 @@ function onAnalyze() {
   min-width: 100px;
   transition: all 0.2s;
 }
-
 .chord-button:hover {
   border-color: #007bff;
 }
-
 .remove-button {
   position: absolute;
   top: -10px;
@@ -275,7 +329,6 @@ function onAnalyze() {
   justify-content: center;
   line-height: 1;
 }
-
 .add-button {
   width: 50px;
   height: 50px;
@@ -287,7 +340,6 @@ function onAnalyze() {
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .add-button:hover {
   background-color: #3c3c3c;
   color: white;
@@ -306,21 +358,107 @@ function onAnalyze() {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  width: 220px;
+  gap: 1rem; /* Espace augmenté */
+  width: 500px; /* Largeur augmentée */
 }
 
-.editor-popover select {
-  border: 1px solid #ccc;
-  padding: 4px;
+.root-select {
+  background-color: #3c3c3c;
+  color: white;
+  border: 1px solid #555;
+  padding: 0.5rem;
   border-radius: 4px;
+  width: 100%;
 }
 
-.editor-popover .close-editor {
+.quality-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.category-tabs {
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #4a4a4a;
+}
+.category-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+.category-tabs::-webkit-scrollbar-track {
+  background: #4a4a4a;
+}
+.category-tabs::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 2px;
+}
+
+.category-tabs button {
+  flex-shrink: 0;
+  padding: 0.25rem 0.75rem;
+  margin-right: 0.5rem;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  background-color: #5f5f5f;
+  color: #ddd;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.category-tabs button:hover {
+  background-color: #777;
+}
+.category-tabs button.active {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+  gap: 0.5rem;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 0.25rem;
+}
+.options-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.options-grid::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 2px;
+}
+
+.options-grid button {
+  width: 70px;
+  padding: 0.5rem 0.25rem;
+  border-radius: 4px;
+  border: 1px solid #5f5f5f;
+  background-color: #3c3c3c;
+  color: #ddd;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.options-grid button:hover {
+  border-color: #007bff;
+  color: white;
+}
+.options-grid button.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+  font-weight: bold;
+}
+
+.close-editor {
   margin-top: 0.5rem;
   padding: 0.5rem;
   background-color: #007bff;
-  border: 1px solid;
+  border: 1px solid #007bff;
   color: white;
   border-radius: 4px;
   cursor: pointer;
@@ -330,7 +468,6 @@ function onAnalyze() {
   margin-top: 2rem;
   text-align: center;
 }
-
 .analyze-button {
   padding: 1rem 2rem;
   font-size: 1.2rem;
@@ -339,10 +476,17 @@ function onAnalyze() {
   background-color: #007bff;
   color: white;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-
 .analyze-button:disabled {
   background-color: #555;
   cursor: not-allowed;
+}
+.error-message {
+  color: #ff4d4d;
+  text-align: center;
+  margin-top: 1rem;
 }
 </style>
