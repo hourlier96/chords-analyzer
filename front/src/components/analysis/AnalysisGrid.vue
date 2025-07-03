@@ -191,7 +191,7 @@ const playEntireProgression = async () => {
         if (secondary) {
           const secondaryChordObject = parseChordString(secondary);
           if (secondaryChordObject) {
-            props.piano.playSong(secondaryChordObject);
+            props.piano.play(secondaryChordObject);
           }
           await sleep(800);
         }

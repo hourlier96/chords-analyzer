@@ -1,5 +1,63 @@
 <template>
   <main>
+    <div>
+      <v-dialog v-model="isSettingsOpen" max-width="500">
+        <template #activator="{ props: activatorProps }">
+          <button
+            v-bind="activatorProps"
+            class="control-icon-button"
+            aria-label="Ouvrir les paramètres"
+          >
+            <v-icon :icon="mdiCog" />
+          </button>
+        </template>
+
+        <v-card class="settings-container" width="300px">
+          <v-card-title class="text-h5"> Paramètres </v-card-title>
+          <v-card-text>
+            <div class="setting-item-modal">
+              Mode de lecture audio
+              <v-tooltip
+                location="top"
+                :text="
+                  playbackMode === 'arpeggio'
+                    ? 'Passer en mode accords plaqués'
+                    : 'Passer en mode arpège'
+                "
+              >
+                <template #activator="{ props: tooltipProps }">
+                  <button
+                    v-bind="tooltipProps"
+                    @click="
+                      setPlaybackMode(
+                        playbackMode === 'arpeggio' ? 'chord' : 'arpeggio'
+                      )
+                    "
+                    class="control-icon-button"
+                  >
+                    <v-icon
+                      :icon="
+                        playbackMode === 'arpeggio'
+                          ? mdiWaveform
+                          : mdiMusicCircle
+                      "
+                    />
+                  </button>
+                </template>
+              </v-tooltip>
+            </div>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="blue-darken-1"
+              text="Fermer"
+              @click="isSettingsOpen = false"
+            ></v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </div>
     <ChordProgressionBuilder
       v-model="progression"
       :piano="piano"
@@ -45,12 +103,14 @@
 import { ref, computed } from "vue";
 import * as Tone from "tone";
 import { useAnalysisStore } from "@/stores/analysis.js";
-import { mdiInformation } from "@mdi/js";
+import { mdiInformation, mdiWaveform, mdiMusicCircle, mdiCog } from "@mdi/js";
 import { ALL_NOTES_FLAT, CHORD_FORMULAS } from "@/constants.js"; // Make sure path is correct
 import AnalysisGrid from "@/components/analysis/AnalysisGrid.vue";
 import ChordProgressionBuilder from "@/components/progression/ChordProgressionBuilder.vue";
 
 const analysisStore = useAnalysisStore();
+
+const isSettingsOpen = ref(false);
 
 const defaultProgression = [
   { id: 1, root: "C", quality: "" },
@@ -60,17 +120,26 @@ const defaultProgression = [
 ];
 
 /**
- * Calculates the notes for a given chord.
+ * Calculates the notes for a given chord, keeping them in a balanced, centered range.
  * @param {object} chord - The chord object with { root, quality }.
- * @param {number} octave - The starting octave.
  * @returns {string[]} An array of notes (e.g., ["C4", "E4", "G4"]).
  */
-function getNotesForChord(chord, octave = 4) {
+function getNotesForChord(chord) {
   const intervals = CHORD_FORMULAS[chord.quality];
   if (!intervals) return [];
 
   const rootIndex = ALL_NOTES_FLAT.indexOf(chord.root);
   if (rootIndex === -1) return [];
+
+  let octave = 4;
+  if (
+    chord.root.startsWith("G") ||
+    chord.root.startsWith("A") ||
+    chord.root.startsWith("B")
+  ) {
+    octave = 3;
+  }
+  // --------------------------------------------------
 
   return intervals.map((interval) => {
     const noteIndex = (rootIndex + interval) % 12;
@@ -79,23 +148,53 @@ function getNotesForChord(chord, octave = 4) {
   });
 }
 
-const piano = new Tone.Sampler({
-  urls: { C4: "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3", A4: "A4.mp3" },
-  release: 1,
-  baseUrl: "https://tonejs.github.io/audio/salamander/",
+// 1. Créer une réverbération pour donner de l'espace au son du piano
+const reverb = new Tone.Reverb({
+  decay: 2.5, // La queue de la réverbération
+  wet: 0.3, // La quantité d'effet (0 à 1)
+  preDelay: 0.01,
 }).toDestination();
 
-piano.playbackMode = "chord";
+const playbackMode = ref("arpeggio");
+
+const piano = new Tone.Sampler({
+  urls: {
+    A1: "A1.mp3",
+    C2: "C2.mp3",
+    "D#2": "Ds2.mp3",
+    "F#2": "Fs2.mp3",
+    A2: "A2.mp3",
+    C3: "C3.mp3",
+    "D#3": "Ds3.mp3",
+    "F#3": "Fs3.mp3",
+    A3: "A3.mp3",
+    C4: "C4.mp3",
+    "D#4": "Ds4.mp3",
+    "F#4": "Fs4.mp3",
+    A4: "A4.mp3",
+    C5: "C5.mp3",
+    "D#5": "Ds5.mp3",
+    "F#5": "Fs5.mp3",
+    A5: "A5.mp3",
+    C6: "C6.mp3",
+    "D#6": "Ds6.mp3",
+    "F#6": "Fs6.mp3",
+    A6: "A6.mp3",
+    C7: "C7.mp3",
+  },
+  release: 1.2,
+  baseUrl: "https://tonejs.github.io/audio/salamander/",
+}).chain(reverb);
 
 /**
  * Sets the playback mode for the piano.
  * @param {'arpeggio' | 'chord'} mode - The desired playback mode.
  */
-piano.setPlaybackMode = function (mode) {
+function setPlaybackMode(mode) {
   if (mode === "arpeggio" || mode === "chord") {
-    this.playbackMode = mode;
+    playbackMode.value = mode;
   }
-};
+}
 
 /**
  * Plays a chord (all notes together).
@@ -129,10 +228,10 @@ piano.playArpeggio = function (chord) {
  * @param {object} chord - The chord object with { root, quality }.
  */
 piano.play = function (chord) {
-  if (this.playbackMode === "arpeggio") {
-    this.playArpeggio(chord);
+  if (playbackMode.value === "arpeggio") {
+    piano.playArpeggio(chord);
   } else {
-    this.playChord(chord);
+    piano.playChord(chord);
   }
 };
 
@@ -227,6 +326,38 @@ h1 {
 h3 {
   border-bottom: 1px solid #444;
   padding-bottom: 0.5rem;
+}
+
+.settings-container {
+  background-color: #d6d6d6;
+}
+
+.setting-item-modal {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.control-icon-button {
+  background-color: #4a4a4a;
+  color: #edf2f4;
+  border: 1px solid #555;
+  border-radius: 50%;
+  margin-bottom: 5px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-weight: bold;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Styles pour la grille de résultats */
