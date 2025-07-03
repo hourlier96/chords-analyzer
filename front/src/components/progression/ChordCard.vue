@@ -107,8 +107,6 @@ watch(
 function updateChord(key, value) {
   emit("update:modelValue", { ...chord.value, [key]: value });
 }
-
-// Les fonctions playArpeggio() et getNotesForChord() ont été retirées d'ici.
 </script>
 
 <style scoped>

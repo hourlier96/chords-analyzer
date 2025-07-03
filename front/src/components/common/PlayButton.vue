@@ -1,5 +1,5 @@
 <template>
-  <button class="listen-button" @click.stop="playArpeggio">
+  <button class="listen-button" @click.stop="play">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
@@ -13,7 +13,6 @@
 </template>
 
 <script setup>
-import { CHORD_FORMULAS } from "@/constants.js";
 import * as Tone from "tone";
 
 const props = defineProps({
@@ -23,62 +22,17 @@ const props = defineProps({
   piano: { type: Object, required: true },
 });
 
-// Liste des notes pour le calcul des intervalles
-const ALL_NOTES_FLAT = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
-
-/**
- * Calcule les notes d'un accord à partir de sa fondamentale et de sa qualité.
- * @param {number} octave - L'octave de départ pour les notes.
- * @returns {string[]} Un tableau de notes (ex: ["C4", "E4", "G4"]).
- */
-function getNotesForChord(octave = 4) {
-  const intervals = CHORD_FORMULAS[props.chord.quality];
-  if (!intervals) return [];
-
-  const rootIndex = ALL_NOTES_FLAT.indexOf(props.chord.root);
-  if (rootIndex === -1) return [];
-
-  return intervals.map((interval) => {
-    const noteIndex = (rootIndex + interval) % 12;
-    const currentOctave = octave + Math.floor((rootIndex + interval) / 12);
-    return `${ALL_NOTES_FLAT[noteIndex]}${currentOctave}`;
-  });
-}
-
 /**
  * Joue les notes de l'accord en arpège.
  */
-async function playArpeggio() {
-  // S'assure que le contexte audio est démarré (nécessaire sur interaction de l'utilisateur)
+async function play() {
+  // S'assure que le contexte audio est démarré
   if (Tone.getContext().state !== "running") {
     await Tone.start();
   }
 
-  // Arrête toutes les notes précédemment jouées
-  props.piano.releaseAll();
-
-  const notes = getNotesForChord();
-
-  if (notes.length > 0) {
-    const now = Tone.now();
-    notes.forEach((note, index) => {
-      // Joue chaque note de l'arpège avec un léger décalage
-      props.piano.triggerAttackRelease(note, "0.5s", now + index * 0.12);
-    });
-  }
+  // Appelle la méthode directement depuis l'objet piano
+  props.piano.play(props.chord);
 }
 </script>
 

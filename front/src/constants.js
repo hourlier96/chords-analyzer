@@ -12,6 +12,20 @@ export const NOTES = [
   "A# / Bb",
   "B",
 ];
+export const ALL_NOTES_FLAT = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
 export const QUALITIES = [
   {
     label: "Majeurs",

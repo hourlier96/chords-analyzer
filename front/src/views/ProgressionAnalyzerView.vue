@@ -46,6 +46,7 @@ import { ref, computed } from "vue";
 import * as Tone from "tone";
 import { useAnalysisStore } from "@/stores/analysis.js";
 import { mdiInformation } from "@mdi/js";
+import { ALL_NOTES_FLAT, CHORD_FORMULAS } from "@/constants.js"; // Make sure path is correct
 import AnalysisGrid from "@/components/analysis/AnalysisGrid.vue";
 import ChordProgressionBuilder from "@/components/progression/ChordProgressionBuilder.vue";
 
@@ -58,42 +59,84 @@ const defaultProgression = [
   { id: 4, root: "A", quality: "m7" },
 ];
 
+/**
+ * Calculates the notes for a given chord.
+ * @param {object} chord - The chord object with { root, quality }.
+ * @param {number} octave - The starting octave.
+ * @returns {string[]} An array of notes (e.g., ["C4", "E4", "G4"]).
+ */
+function getNotesForChord(chord, octave = 4) {
+  const intervals = CHORD_FORMULAS[chord.quality];
+  if (!intervals) return [];
+
+  const rootIndex = ALL_NOTES_FLAT.indexOf(chord.root);
+  if (rootIndex === -1) return [];
+
+  return intervals.map((interval) => {
+    const noteIndex = (rootIndex + interval) % 12;
+    const currentOctave = octave + Math.floor((rootIndex + interval) / 12);
+    return `${ALL_NOTES_FLAT[noteIndex]}${currentOctave}`;
+  });
+}
+
 const piano = new Tone.Sampler({
-  urls: {
-    A0: "A0.mp3",
-    C1: "C1.mp3",
-    "D#1": "Ds1.mp3",
-    "F#1": "Fs1.mp3",
-    A1: "A1.mp3",
-    C2: "C2.mp3",
-    "D#2": "Ds2.mp3",
-    "F#2": "Fs2.mp3",
-    A2: "A2.mp3",
-    C3: "C3.mp3",
-    "D#3": "Ds3.mp3",
-    "F#3": "Fs3.mp3",
-    A3: "A3.mp3",
-    C4: "C4.mp3",
-    "D#4": "Ds4.mp3",
-    "F#4": "Fs4.mp3",
-    A4: "A4.mp3",
-    C5: "C5.mp3",
-    "D#5": "Ds5.mp3",
-    "F#5": "Fs5.mp3",
-    A5: "A5.mp3",
-    C6: "C6.mp3",
-    "D#6": "Ds6.mp3",
-    "F#6": "Fs6.mp3",
-    A6: "A6.mp3",
-    C7: "C7.mp3",
-    "D#7": "Ds7.mp3",
-    "F#7": "Fs7.mp3",
-    A7: "A7.mp3",
-    C8: "C8.mp3",
-  },
+  urls: { C4: "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3", A4: "A4.mp3" },
   release: 1,
   baseUrl: "https://tonejs.github.io/audio/salamander/",
 }).toDestination();
+
+piano.playbackMode = "chord";
+
+/**
+ * Sets the playback mode for the piano.
+ * @param {'arpeggio' | 'chord'} mode - The desired playback mode.
+ */
+piano.setPlaybackMode = function (mode) {
+  if (mode === "arpeggio" || mode === "chord") {
+    this.playbackMode = mode;
+  }
+};
+
+/**
+ * Plays a chord (all notes together).
+ * @param {object} chord - The chord object with { root, quality }.
+ */
+piano.playChord = function (chord) {
+  this.releaseAll();
+  const notes = getNotesForChord(chord);
+  if (notes.length > 0) {
+    this.triggerAttack(notes);
+  }
+};
+
+/**
+ * Plays a chord as an arpeggio.
+ * @param {object} chord - The chord object with { root, quality }.
+ */
+piano.playArpeggio = function (chord) {
+  this.releaseAll();
+  const notes = getNotesForChord(chord);
+  if (notes.length > 0) {
+    const now = Tone.now();
+    notes.forEach((note, index) => {
+      this.triggerAttackRelease(note, "0.5s", now + index * 0.12);
+    });
+  }
+};
+
+/**
+ * Plays a chord based on the current playbackMode.
+ * @param {object} chord - The chord object with { root, quality }.
+ */
+piano.play = function (chord) {
+  if (this.playbackMode === "arpeggio") {
+    this.playArpeggio(chord);
+  } else {
+    this.playChord(chord);
+  }
+};
+
+// --- End of Audio Logic ---
 
 const progression = ref(
   analysisStore.lastAnalysis.progression &&

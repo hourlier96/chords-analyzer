@@ -5,6 +5,19 @@
   >
     <div class="analysis-header">
       <div class="header-controls">
+        <v-tooltip location="top" text="Lire la progression">
+          <template #activator="{ props }">
+            <button
+              v-bind="props"
+              @click="playEntireProgression"
+              class="control-icon-button"
+              :disabled="isPlaying"
+            >
+              <v-icon :icon="mdiPlay" />
+            </button>
+          </template>
+        </v-tooltip>
+
         <v-tooltip location="top" text="Dominantes secondaires">
           <template #activator="{ props }">
             <button
@@ -80,8 +93,9 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import * as Tone from "tone";
 import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
-import { mdiYinYang, mdiSync } from "@mdi/js";
+import { mdiYinYang, mdiSync, mdiPlay } from "@mdi/js";
 
 const props = defineProps({
   analysis: {
@@ -94,6 +108,7 @@ const props = defineProps({
 const showSecondaryDominants = ref(false);
 const showTritonSubstitutions = ref(false);
 const activeMode = ref("Ionian (Original)");
+const isPlaying = ref(false);
 
 const modeOptions = computed(() => {
   if (!props.analysis.result?.major_modes_substitutions) {
@@ -147,6 +162,53 @@ const secondaryDominantsMap = computed(() => {
   }
   return map;
 });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const playEntireProgression = async () => {
+  if (isPlaying.value) return;
+
+  if (Tone.getContext().state !== "running") {
+    await Tone.start();
+  }
+
+  isPlaying.value = true;
+
+  try {
+    for (const item of displayedProgression.value) {
+      if (!item.chord) continue;
+
+      const parseChordString = (chordStr) => {
+        const rootMatch = chordStr.match(/^[A-G][#b]?/);
+        if (!rootMatch) return null;
+        const root = rootMatch[0];
+        const quality = chordStr.substring(root.length);
+        return { root, quality };
+      };
+
+      if (showSecondaryDominants.value) {
+        const secondary = secondaryDominantsMap.value.get(item.chord);
+        if (secondary) {
+          const secondaryChordObject = parseChordString(secondary);
+          if (secondaryChordObject) {
+            props.piano.playSong(secondaryChordObject);
+          }
+          await sleep(800);
+        }
+      }
+
+      const mainChordObject = parseChordString(item.chord);
+      if (mainChordObject) {
+        props.piano.play(mainChordObject);
+      }
+      await sleep(1000);
+    }
+  } catch (error) {
+    console.error("Error during playback:", error);
+  } finally {
+    isPlaying.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -177,12 +239,19 @@ const secondaryDominantsMap = computed(() => {
   cursor: pointer;
   transition:
     background-color 0.2s,
-    border-color 0.2s;
+    border-color 0.2s,
+    opacity 0.2s;
 }
 
 .header-controls button:hover {
   background-color: #5a5a5a;
   border-color: #777;
+}
+
+.header-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #4a4a4a;
 }
 
 .header-controls .control-icon-button {
@@ -205,7 +274,7 @@ const secondaryDominantsMap = computed(() => {
   align-items: center;
 }
 
-.header-controls .control-icon-button:hover {
+.header-controls .control-icon-button:hover:not(:disabled) {
   background-color: #5a5a5a;
   border-color: #777;
 }
@@ -252,7 +321,7 @@ button.control-icon-button:has(.v-icon) {
 
 @media (min-width: 600px) {
   .analysis-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }
 
