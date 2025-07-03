@@ -14,14 +14,7 @@
         class="analysis-card card-front"
         :class="{ 'is-swapped': showSubstitution }"
       >
-        <div v-if="showSubstitution" class="card-content">
-          <div class="chord-name">{{ tritoneSubstitutionData.chord }}</div>
-          <div class="found-numeral tritone_sub_chord">
-            {{ tritoneSubstitutionData.found_numeral }}
-          </div>
-        </div>
-
-        <div v-else class="card-content">
+        <div class="card-content">
           <div class="chord-name">{{ item.chord }}</div>
           <div
             class="found-numeral"
@@ -103,10 +96,6 @@ const props = defineProps({
     type: Number,
     required: true,
   },
-  isTritoneModeActive: {
-    type: Boolean,
-    required: true,
-  },
   showSecondaryDominant: {
     type: Boolean,
     required: true,
@@ -122,64 +111,6 @@ const isFlipped = ref(false);
 const toggleCardFlip = () => {
   isFlipped.value = !isFlipped.value;
 };
-
-const tritoneSubstitutionData = computed(() => {
-  const substitutions = props.analysis.result.tritone_substitutions;
-  if (!Array.isArray(substitutions)) return null;
-  const foundSub = substitutions.find((sub) => sub[0] === props.item.chord);
-  if (foundSub && foundSub[1]) {
-    return {
-      chord: foundSub[1],
-      found_numeral: "subV",
-      is_diatonic: false,
-    };
-  }
-  return null;
-});
-
-const isTritoneSwapContextuallyValid = computed(() => {
-  if (!tritoneSubstitutionData.value) {
-    return false;
-  }
-  const progression = props.analysis.progression;
-  const quality_analysis = props.analysis.result.quality_analysis;
-  if (!quality_analysis || !progression || progression.length === 0) {
-    return false;
-  }
-  const currentChordName = props.item.chord;
-  const nextIndex = (props.currentIndex + 1) % progression.length;
-  const nextChordInProgression = progression[nextIndex];
-  if (!nextChordInProgression) return false;
-
-  const nextChordName = `${nextChordInProgression.root}${nextChordInProgression.quality}`;
-
-  // Vérifier si l'accord est une dominante primaire ou secondaire résolvant sur sa cible.
-  // On utilise la liste des dominantes identifiées par l'analyse pour une précision maximale.
-  const allDominants = props.analysis.result.secondary_dominants;
-  if (!allDominants) {
-    return false; // Si la liste n'existe pas, on ne peut rien valider.
-  }
-
-  // On cherche une correspondance où l'accord actuel est la dominante (primaire ou secondaire)
-  // et l'accord suivant est sa cible de résolution.
-  const isAPertinentDominant = allDominants.some(
-    ([dominantChord, targetChord, description]) => {
-      // La description doit commencer par V7 pour être une fonction dominante.
-      // Cela inclut "V7 (Dominante Primaire)" et "V7/..."
-      return (
-        dominantChord === currentChordName &&
-        targetChord === nextChordName &&
-        description.startsWith("V7")
-      );
-    }
-  );
-
-  return isAPertinentDominant;
-});
-
-const showSubstitution = computed(() => {
-  return props.isTritoneModeActive && isTritoneSwapContextuallyValid.value;
-});
 
 const shouldShowExpected = computed(() => {
   return (
@@ -293,10 +224,6 @@ function extractChordComponents(data) {
 
 .analysis-card .foreign_chord {
   color: rgb(255, 95, 95) !important;
-}
-
-.analysis-card .tritone_sub_chord {
-  color: #fdcb6e !important;
 }
 
 .analysis-card.is-swapped {

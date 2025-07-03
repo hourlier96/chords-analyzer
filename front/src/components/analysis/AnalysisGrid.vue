@@ -31,19 +31,6 @@
           </template>
         </v-tooltip>
 
-        <v-tooltip location="top" text="Substitutions tritoniques pertinentes">
-          <template #activator="{ props }">
-            <button
-              v-bind="props"
-              @click="showTritonSubstitutions = !showTritonSubstitutions"
-              class="control-icon-button"
-              :class="{ 'is-active': showTritonSubstitutions }"
-            >
-              <v-icon :icon="mdiYinYang" />
-            </button>
-          </template>
-        </v-tooltip>
-
         <v-tooltip location="top" text="Substitutions modales">
           <template #activator="{ props: tooltipProps }">
             <v-menu location="bottom">
@@ -82,7 +69,6 @@
           :item="item"
           :analysis="analysis"
           :current-index="index"
-          :is-tritone-mode-active="showTritonSubstitutions"
           :show-secondary-dominant="showSecondaryDominants"
           :secondary-dominant-chord="secondaryDominantsMap.get(item.chord)"
         />
@@ -95,7 +81,7 @@
 import { ref, computed } from "vue";
 import * as Tone from "tone";
 import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
-import { mdiYinYang, mdiSync, mdiPlay } from "@mdi/js";
+import { mdiSync, mdiPlay } from "@mdi/js";
 
 const props = defineProps({
   analysis: {
@@ -106,7 +92,6 @@ const props = defineProps({
 });
 
 const showSecondaryDominants = ref(false);
-const showTritonSubstitutions = ref(false);
 const activeMode = ref("Ionian (Original)");
 const isPlaying = ref(false);
 
@@ -153,11 +138,15 @@ const displayedProgression = computed(() => {
 const secondaryDominantsMap = computed(() => {
   const map = new Map();
   if (props.analysis.result && props.analysis.result.secondary_dominants) {
-    for (const dominantPair of Object.values(
+    const allModesData = Object.values(
       props.analysis.result.secondary_dominants
-    )) {
-      const [secondaryChord, targetChord] = dominantPair;
-      map.set(targetChord, secondaryChord);
+    );
+    for (const dominantPairsForMode of allModesData) {
+      for (const dominantPair of dominantPairsForMode) {
+        const [secondaryChord, targetChord] = dominantPair;
+
+        map.set(targetChord, secondaryChord);
+      }
     }
   }
   return map;

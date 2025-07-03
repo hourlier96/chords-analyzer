@@ -48,10 +48,10 @@ def get_all_substitutions(request: ProgressionRequest):
 
     try:
         # Find tonic with IA
-        tonic, mode, explanations = detect_tonic_and_mode(progression)
-        # tonic = "C"
-        # mode = "Ionian"
-        # explanations = "balbla"
+        # tonic, mode, explanations = detect_tonic_and_mode(progression)
+        tonic = "C"
+        mode = "Ionian"
+        explanations = "balbla"
         detected_tonic_index = get_note_index(tonic)
 
         # Find "foreign" chords from detected mode
@@ -74,28 +74,38 @@ def get_all_substitutions(request: ProgressionRequest):
                 relative_tonic_index,
                 degrees_to_borrow,
             )
-            mode_label = mode_name + " (Original)" if mode_name == mode else mode_name
-            substitutions[mode_label] = {
+            substitutions[mode_name] = {
                 "borrowed_scale": f"{get_note_from_index(relative_tonic_index)} Major",
                 "substitution": new_progression,
             }
         # Harmonize all existing modes
         harmonized_chords = {}
         for mode_name, (_, _, interval) in MODES_DATA.items():
-            mode_label = mode_name + " (Original)" if mode_name == mode else mode_name
             tonic_index = get_note_index(tonic_name)
-            harmonized_chords[mode_label] = [
+            harmonized_chords[mode_name] = [
                 get_diatonic_7th_chord(deg, tonic_index, mode_name)
                 for deg in degrees_to_borrow
             ]
 
+        # Get all secondary dominants for all major modes
+        secondary_dominants = {}
+        for mode_name, substitutions_data in substitutions.items():
+            if mode_name not in secondary_dominants:
+                secondary_dominants[mode_name] = []
+            for chord in substitutions_data["substitution"]:
+                secondary_dominant, analysis = get_secondary_dominant_for_target(
+                    chord, tonic, mode_name
+                )
+                secondary_dominants[mode_name].append(
+                    (secondary_dominant, chord, analysis)
+                )
+
         tritone_substitutions = []
-        secondary_dominants = []
         for chord in progression:
             secondary_dominant, analysis = get_secondary_dominant_for_target(
                 chord, tonic, mode
             )
-            secondary_dominants.append((secondary_dominant, chord, analysis))
+            secondary_dominants[mode_name].append((secondary_dominant, chord, analysis))
 
             substitute, analysis = get_tritone_substitute(chord)
             tritone_substitutions.append([chord, substitute, analysis])
@@ -109,7 +119,7 @@ def get_all_substitutions(request: ProgressionRequest):
             "major_modes_substitutions": substitutions,
             "harmonized_chords": harmonized_chords,
             "secondary_dominants": secondary_dominants,
-            "tritone_substitutions": tritone_substitutions,
+            # "tritone_substitutions": tritone_substitutions,
         }
     except Exception as e:
         raise e
