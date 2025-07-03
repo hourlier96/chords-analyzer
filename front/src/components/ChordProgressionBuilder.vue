@@ -9,6 +9,18 @@
       >
         <template #item="{ element: chord }">
           <div class="chord-slot">
+            <button class="listen-button" @click.stop="playArpeggio(chord)">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+
             <button class="chord-button" @click="startEditing(chord)">
               {{ getChordDisplayName(chord) }}
             </button>
@@ -67,7 +79,6 @@
         "
       >
         <template v-if="isLoading">
-          <!-- Remplacé v-progress-circular par une animation SVG pour la compatibilité -->
           <svg
             class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline"
             xmlns="http://www.w3.org/2000/svg"
@@ -101,8 +112,9 @@
 <script setup>
 import { ref, defineEmits, computed } from "vue";
 import { useAnalysisStore } from "@/stores/analysis.js";
-import { QUALITIES, NOTES } from "@/constants.js";
+import { QUALITIES, NOTES, CHORD_FORMULAS } from "@/constants.js";
 import draggable from "vuedraggable";
+import * as Tone from "tone";
 
 const analysisStore = useAnalysisStore();
 
@@ -116,6 +128,58 @@ const emit = defineEmits(["update:modelValue", "analyze"]);
 
 const editingChordId = ref(null);
 const activeQualityCategory = ref(null);
+
+const piano = new Tone.Sampler({
+  urls: {
+    A0: "A0.mp3",
+    C1: "C1.mp3",
+    "D#1": "Ds1.mp3",
+    "F#1": "Fs1.mp3",
+    A1: "A1.mp3",
+    C2: "C2.mp3",
+    "D#2": "Ds2.mp3",
+    "F#2": "Fs2.mp3",
+    A2: "A2.mp3",
+    C3: "C3.mp3",
+    "D#3": "Ds3.mp3",
+    "F#3": "Fs3.mp3",
+    A3: "A3.mp3",
+    C4: "C4.mp3",
+    "D#4": "Ds4.mp3",
+    "F#4": "Fs4.mp3",
+    A4: "A4.mp3",
+    C5: "C5.mp3",
+    "D#5": "Ds5.mp3",
+    "F#5": "Fs5.mp3",
+    A5: "A5.mp3",
+    C6: "C6.mp3",
+    "D#6": "Ds6.mp3",
+    "F#6": "Fs6.mp3",
+    A6: "A6.mp3",
+    C7: "C7.mp3",
+    "D#7": "Ds7.mp3",
+    "F#7": "Fs7.mp3",
+    A7: "A7.mp3",
+    C8: "C8.mp3",
+  },
+  release: 1,
+  baseUrl: "https://tonejs.github.io/audio/salamander/",
+}).toDestination();
+
+const ALL_NOTES = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
 
 const progression = computed({
   get: () => props.modelValue,
@@ -179,6 +243,50 @@ function getChordDisplayName(chord) {
 function onAnalyze() {
   emit("analyze", progression.value);
 }
+
+function getNotesForChord(chord, octave = 4) {
+  const intervals = CHORD_FORMULAS[chord.quality];
+  if (!intervals) {
+    console.warn(`Qualité d'accord non reconnue: ${chord.quality}`);
+    return [];
+  }
+  const rootIndex = ALL_NOTES.indexOf(chord.root);
+  if (rootIndex === -1) return [];
+  return intervals.map((interval) => {
+    const noteIndex = (rootIndex + interval) % 12;
+    const currentOctave = octave + Math.floor((rootIndex + interval) / 12);
+    return `${ALL_NOTES[noteIndex]}${currentOctave}`;
+  });
+}
+
+// async function playChord(chord) {
+//   if (Tone.context.state !== "running") {
+//     await Tone.start();
+//   }
+//   piano.releaseAll();
+//   const notes = getNotesForChord(chord);
+//   if (notes.length > 0) {
+//     piano.triggerAttackRelease(notes, "2s");
+//   }
+// }
+
+async function playArpeggio(chord) {
+  if (Tone.getContext().state !== "running") {
+    await Tone.start();
+  }
+  piano.releaseAll();
+  const notes = getNotesForChord(chord);
+
+  if (notes.length > 0) {
+    const now = Tone.now();
+
+    notes.forEach((note, index) => {
+      // Le décalage est de 0.12 seconde par note (index * 0.12)
+      // La note elle-même dure 0.5 seconde
+      piano.triggerAttackRelease(note, "0.5", now + index * 0.12);
+    });
+  }
+}
 </script>
 
 <style scoped>
@@ -239,6 +347,28 @@ function onAnalyze() {
   justify-content: center;
   line-height: 1;
 }
+
+.listen-button {
+  position: absolute;
+  bottom: -10px;
+  left: -10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: background-color 0.2s;
+}
+.listen-button:hover {
+  background-color: #0056b3;
+}
+
 .add-button {
   width: 50px;
   height: 50px;
@@ -268,8 +398,8 @@ function onAnalyze() {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 1rem; /* Espace augmenté */
-  width: 500px; /* Largeur augmentée */
+  gap: 1rem;
+  width: 500px;
 }
 
 .root-select {
