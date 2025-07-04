@@ -1,6 +1,6 @@
 <template>
   <div class="analysis-card-container">
-    <PlayButton :chord="extractChordComponents(item)" :piano="props.piano" />
+    <PlayButton :chord="extractChordComponents(item)" :piano="piano" />
     <div
       v-if="showSecondaryDominant && secondaryDominantChord"
       class="docked-secondary-dominant"
@@ -75,10 +75,11 @@
 <script setup>
 import { ref, computed } from "vue";
 import { mdiInformation } from "@mdi/js";
+
+import { piano } from "@/sampler.js";
 import PlayButton from "@/components/common/PlayButton.vue";
 
 const props = defineProps({
-  piano: { type: Object, required: true },
   item: {
     type: Object,
     required: true,

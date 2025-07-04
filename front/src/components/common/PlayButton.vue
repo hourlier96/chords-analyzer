@@ -14,25 +14,18 @@
 
 <script setup>
 import * as Tone from "tone";
+import { piano } from "@/sampler.js";
 
 const props = defineProps({
-  // L'objet accord contenant la fondamentale (root) et la qualité (quality)
   chord: { type: Object, required: true },
-  // L'instance du sampler Tone.js partagée
-  piano: { type: Object, required: true },
 });
 
-/**
- * Joue les notes de l'accord en arpège.
- */
 async function play() {
-  // S'assure que le contexte audio est démarré
   if (Tone.getContext().state !== "running") {
     await Tone.start();
   }
 
-  // Appelle la méthode directement depuis l'objet piano
-  props.piano.play(props.chord);
+  piano.play(props.chord);
 }
 </script>
 
@@ -44,8 +37,8 @@ async function play() {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: none;
-  background-color: #007bff;
+  border: 1 px solid;
+  background-color: #25303b;
   color: white;
   cursor: pointer;
   display: flex;

@@ -94,6 +94,8 @@ def get_secondary_dominant_for_target(target_chord_name, tonic_name, mode_name):
     Calcule la dominante (primaire ou secondaire) qui cible un accord donné.
     Retourne la dominante et son analyse fonctionnelle dans la tonalité.
     """
+    if not target_chord_name:
+        return "N/A", "Pas d'accord d'origine"
     parsed_target = parse_chord(target_chord_name)
     if not parsed_target:
         return "N/A", "Accord non reconnu"

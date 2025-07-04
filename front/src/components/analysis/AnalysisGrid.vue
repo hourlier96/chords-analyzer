@@ -87,7 +87,7 @@
         :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
       >
         <AnalysisCard
-          :piano="props.piano"
+          :piano="piano"
           :item="item"
           :analysis="analysis"
           :current-index="index"
@@ -102,15 +102,17 @@
 <script setup>
 import { ref, computed } from "vue";
 import * as Tone from "tone";
-import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
 import { mdiSync, mdiPlay, mdiStop, mdiClose } from "@mdi/js";
+
+import { sleep } from "@/utils.js";
+import { piano } from "@/sampler.js";
+import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
 
 const props = defineProps({
   analysis: {
     type: Object,
     required: true,
   },
-  piano: { type: Object, required: true },
 });
 
 const showSecondaryDominants = ref(false);
@@ -175,8 +177,6 @@ const secondaryDominantsMap = computed(() => {
   return map;
 });
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const playEntireProgression = async () => {
   if (isPlaying.value) return;
 
@@ -206,7 +206,7 @@ const playEntireProgression = async () => {
         if (secondary) {
           const secondaryChordObject = parseChordString(secondary);
           if (secondaryChordObject) {
-            props.piano.play(secondaryChordObject);
+            piano.play(secondaryChordObject);
           }
           await sleep(800);
         }
@@ -214,7 +214,7 @@ const playEntireProgression = async () => {
 
       const mainChordObject = parseChordString(item.chord);
       if (mainChordObject) {
-        props.piano.play(mainChordObject);
+        piano.play(mainChordObject);
       }
       await sleep(1000);
     }
@@ -228,7 +228,7 @@ const playEntireProgression = async () => {
 
 function stopSound() {
   isPlaying.value = false;
-  props.piano.releaseAll();
+  piano.releaseAll();
   currentlyPlayingIndex.value = null;
 }
 

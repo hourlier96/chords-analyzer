@@ -1,6 +1,6 @@
 <template>
   <div class="chord-slot">
-    <PlayButton :chord="chord" :piano="piano" />
+    <PlayButton :chord="chord" />
 
     <button class="chord-button" @click="$emit('start-editing')">
       {{ chordDisplayName }}
@@ -54,7 +54,6 @@ import PlayButton from "@/components/common/PlayButton.vue";
 const props = defineProps({
   modelValue: { type: Object, required: true },
   isEditing: { type: Boolean, default: false },
-  piano: { type: Object, required: true },
 });
 
 const emit = defineEmits([
@@ -127,6 +126,9 @@ function updateChord(key, value) {
 }
 .chord-button:hover {
   border-color: #007bff;
+}
+.is-playing-halo {
+  box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
 }
 .remove-button {
   position: absolute;

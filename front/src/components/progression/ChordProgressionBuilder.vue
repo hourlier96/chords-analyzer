@@ -1,5 +1,29 @@
 <template>
   <div class="builder-container">
+    <div class="header-controls">
+      <v-tooltip v-if="!isPlaying" location="top" text="Lire la progression">
+        <template #activator="{ props }">
+          <button
+            v-bind="props"
+            @click="playEntireProgression"
+            class="control-icon-button"
+          >
+            <v-icon :icon="mdiPlay" />
+          </button>
+        </template>
+      </v-tooltip>
+      <v-tooltip v-else location="top" text="Stopper la lecture">
+        <template #activator="{ props }">
+          <button
+            v-bind="props"
+            @click="stopSound()"
+            class="control-icon-button"
+          >
+            <v-icon :icon="mdiStop" />
+          </button>
+        </template>
+      </v-tooltip>
+    </div>
     <div class="progression-builder">
       <draggable
         v-model="progression"
@@ -13,6 +37,7 @@
             @update:modelValue="(newChord) => updateChord(index, newChord)"
             :is-editing="editingChordId === chord.id"
             :piano="piano"
+            :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
             @remove="removeChord(chord.id)"
             @start-editing="startEditing(chord)"
             @stop-editing="stopEditing"
@@ -51,15 +76,19 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useAnalysisStore } from "@/stores/analysis.js";
 import draggable from "vuedraggable";
-import ChordCard from "./ChordCard.vue"; // Assurez-vous que le chemin est correct
+import * as Tone from "tone";
+import { mdiPlay, mdiStop } from "@mdi/js";
+
+import { piano } from "@/sampler.js";
+import { sleep } from "@/utils.js";
+import { useAnalysisStore } from "@/stores/analysis.js";
+import ChordCard from "@/components/progression/ChordCard.vue";
 
 const analysisStore = useAnalysisStore();
 
 const props = defineProps({
   modelValue: { type: Array, required: true },
-  piano: { type: Object, required: true },
   isLoading: { type: Boolean, default: false },
   error: { type: String, default: "" },
 });
@@ -67,6 +96,8 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "analyze"]);
 
 const editingChordId = ref(null);
+const isPlaying = ref(false);
+const currentlyPlayingIndex = ref(null);
 
 const progression = computed({
   get: () => props.modelValue,
@@ -101,7 +132,7 @@ function updateChord(index, newChord) {
   const newProgression = [...progression.value];
   newProgression[index] = newChord;
   progression.value = newProgression;
-  props.piano.play(newChord);
+  piano.play(newChord);
 }
 
 function startEditing(chord) {
@@ -115,10 +146,39 @@ function stopEditing() {
 function onAnalyze() {
   emit("analyze", progression.value);
 }
+
+const playEntireProgression = async () => {
+  if (isPlaying.value) return;
+
+  if (Tone.getContext().state !== "running") {
+    await Tone.start();
+  }
+
+  isPlaying.value = true;
+  try {
+    for (const [index, item] of progression.value.entries()) {
+      if (!isPlaying.value) break;
+      if (!item) continue;
+      currentlyPlayingIndex.value = index;
+      piano.play(item);
+      await sleep(1000);
+    }
+    currentlyPlayingIndex.value = null;
+  } catch (error) {
+    console.error("Error during playback:", error);
+  } finally {
+    isPlaying.value = false;
+  }
+};
+
+function stopSound() {
+  isPlaying.value = false;
+  piano.releaseAll();
+  currentlyPlayingIndex.value = null;
+}
 </script>
 
 <style scoped>
-/* Les styles pour le conteneur principal, .progression-builder, .add-button, etc. restent ici */
 .builder-container {
   background-color: #2f2f2f;
   padding: 1.5rem;
@@ -130,6 +190,37 @@ function onAnalyze() {
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
+}
+
+.header-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 10px;
+}
+
+.header-controls .control-icon-button {
+  background-color: #4a4a4a;
+  color: #edf2f4;
+  border: 1px solid #555;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-weight: bold;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.header-controls .control-icon-button:hover:not(:disabled) {
+  background-color: #5a5a5a;
+  border-color: #777;
 }
 .draggable-container {
   display: flex;
