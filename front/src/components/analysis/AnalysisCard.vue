@@ -11,10 +11,7 @@
       <div class="analysis-card card-front">
         <div class="card-content">
           <div class="chord-name">{{ item.chord }}</div>
-          <div
-            class="found-numeral"
-            :class="{ foreign_chord: !item.is_diatonic }"
-          >
+          <div class="found-numeral" :class="getChordClass(item)">
             {{ item.found_numeral ? item.found_numeral : "" }}
             <v-tooltip v-if="borrowedInfo" location="right">
               <template #activator="{ props: tooltipProps }">
@@ -112,7 +109,8 @@ const shouldShowExpected = computed(() => {
   return (
     !props.item.is_diatonic &&
     !!props.item.expected_chord_name &&
-    props.item.expected_chord_name !== props.item.chord
+    props.item.expected_chord_name !== props.item.chord &&
+    !props.item.expect_from_other_mode
   );
 });
 
@@ -131,6 +129,26 @@ function extractChordComponents(data) {
 
   const [, root, quality] = match;
   return { root, quality };
+}
+
+function getChordClass(item) {
+  const hasFoundNumeral = item && typeof item.found_numeral === "string";
+
+  return {
+    // Un accord étranger contient un bémol dans son chiffrage (ex: bIII, bVI)
+    foreign_chord:
+      !item.is_diatonic && hasFoundNumeral && item.found_numeral.includes("b"),
+
+    // Un accord d'emprunt est un accord non-diatonique pour lequel l'analyseur
+    // a trouvé une correspondance attendue dans le mode parallèle.
+    borrowed_chord: !item.is_diatonic && !!item.expected_chord_name,
+
+    // Un accord de substitution est un accord non-diatonique qui n'est ni un emprunt
+    substitution_chord:
+      !item.is_diatonic &&
+      !item.expected_chord_name &&
+      (!hasFoundNumeral || !item.found_numeral.includes("b")),
+  };
 }
 </script>
 
@@ -214,12 +232,18 @@ function extractChordComponents(data) {
   font-family: "Courier New", Courier, monospace;
   font-size: 1.8rem;
   font-weight: bold;
-  color: #a0cfff;
+  color: #00b143;
   margin: 0.5rem 0;
 }
 
+.analysis-card .borrowed_chord {
+  color: #fdcb6e;
+}
 .analysis-card .foreign_chord {
   color: rgb(255, 95, 95) !important;
+}
+.analysis-card .substitution_chord {
+  color: rgb(205 205 205) !important;
 }
 
 .analysis-card.is-swapped {
@@ -276,7 +300,6 @@ function extractChordComponents(data) {
   right: 5px;
 }
 
-/* NOUVEAU : Style pour le bouton de swap de mode */
 .mode-swap-button {
   left: 5px;
 }

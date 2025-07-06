@@ -93,8 +93,9 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
 
     # --- Logique pour déterminer l'accord "attendu" ---
     expected_quality = None
-    expected_numeral = "N/A"
-    expected_chord_name = "N/A"
+    expected_numeral = None
+    expected_chord_name = None
+    expect_from_other_mode = None
 
     mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
 
@@ -115,8 +116,6 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
             diatonic_base_numeral = ROMAN_DEGREES[degree_index]
             expected_numeral = _format_numeral(diatonic_base_numeral, expected_quality)
 
-            # *** DÉBUT DE LA CORRECTION DU BUG ***
-            # EXCEPTION: Le V7 en mode mineur est si courant qu'il est considéré comme l'attente par défaut.
             if mode_name == "Aeolian" and base_numeral == "V" and found_quality == "7":
                 parallel_mode_name = PARALLEL_MODES.get(mode_name)  # 'ionian'
                 if parallel_mode_name:
@@ -139,6 +138,7 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
                     degree_index = p_intervals.index(interval)
                     expected_quality = p_qualities[degree_index]
                     expected_numeral = _format_numeral(base_numeral, expected_quality)
+                    expect_from_other_mode = parallel_mode_name
 
     # Calcul du nom de l'accord attendu si une qualité a été trouvée
     if expected_quality is not None:
@@ -158,5 +158,6 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
         "found_quality": found_quality,
         "expected_quality": expected_quality,
         "expected_chord_name": expected_chord_name,
+        "expect_from_other_mode": expect_from_other_mode,
         "is_diatonic": is_diatonic_flag,
     }

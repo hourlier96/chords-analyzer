@@ -128,23 +128,22 @@ const playEntireProgression = async () => {
         };
       };
 
-      // La logique de lecture des dominantes secondaires reste ici
       if (showSecondaryDominants.value) {
         const secondary = props.secondaryDominantsMap.get(item.chord);
         if (secondary && secondary != "N/A") {
           const secondaryChordObject = parseChordString(secondary);
           if (secondaryChordObject) {
             props.piano.play(secondaryChordObject);
+            await sleep(1000);
           }
-          await sleep(1000);
         }
       }
 
       const mainChordObject = parseChordString(item.chord);
       if (mainChordObject) {
         props.piano.play(mainChordObject);
+        await sleep(1000);
       }
-      await sleep(1000);
     }
   } catch (error) {
     console.error("Error during playback:", error);

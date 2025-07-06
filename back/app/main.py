@@ -71,6 +71,7 @@ def get_all_substitutions(request: ProgressionRequest):
             relative_tonic_index = (detected_tonic_index + interval + 12) % 12
             new_progression = get_substitutions(
                 progression,
+                mode_name,
                 relative_tonic_index,
                 degrees_to_borrow,
             )
@@ -92,12 +93,12 @@ def get_all_substitutions(request: ProgressionRequest):
         for mode_name, substitutions_data in substitutions.items():
             if mode_name not in secondary_dominants:
                 secondary_dominants[mode_name] = []
-            for chord in substitutions_data["substitution"]:
+            for item in substitutions_data["substitution"]:
                 secondary_dominant, analysis = get_secondary_dominant_for_target(
-                    chord, tonic, mode_name
+                    item["chord"], tonic, mode_name
                 )
                 secondary_dominants[mode_name].append(
-                    (secondary_dominant, chord, analysis)
+                    (secondary_dominant, item["chord"], analysis)
                 )
 
         tritone_substitutions = []

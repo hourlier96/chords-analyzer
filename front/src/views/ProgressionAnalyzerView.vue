@@ -230,21 +230,17 @@ const activeModeTitle = computed(() => {
 
 const substitutedModalProgression = computed(() => {
   if (!analysisResults.value) return [];
-  const originalProgression = analysisResults.value.quality_analysis;
   const modeData =
     analysisResults.value.major_modes_substitutions?.[activeMode.value];
 
   if (!modeData || !modeData.substitution) {
     return [];
   }
-
-  return modeData.substitution.map((chordName, index) => {
-    if (index === 0) {
-      return originalProgression[0];
-    }
+  return modeData.substitution.map((item) => {
     return {
-      chord: chordName,
-      found_numeral: null,
+      chord: item.chord,
+      found_numeral: item.roman,
+      found_quality: item.quality,
       is_diatonic: false,
       expected_chord_name: null,
       expected_numeral: null,
@@ -397,8 +393,9 @@ header {
    ========================================================================== */
 .result-title {
   color: #a0cfff;
-  font-family: "Courier New", Courier, monospace;
   margin-top: 0;
+  font-weight: bold;
+  font-size: 40px;
   text-align: center;
 }
 
