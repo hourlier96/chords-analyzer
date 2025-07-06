@@ -2,7 +2,7 @@
   <div class="analysis-card-container">
     <PlayButton :chord="extractChordComponents(item)" :piano="piano" />
     <div
-      v-if="showSecondaryDominant && secondaryDominantChord"
+      v-if="showSecondaryDominant && secondaryDominantChord != 'N/A'"
       class="docked-secondary-dominant"
     >
       <div class="chord-name">{{ secondaryDominantChord }}</div>
