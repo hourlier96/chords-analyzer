@@ -1,7 +1,5 @@
 <template>
   <div class="chord-slot">
-    <PlayButton :chord="chord" />
-
     <button class="chord-button" @click="$emit('start-editing')">
       {{ chordDisplayName }}
     </button>
@@ -9,36 +7,62 @@
     <button class="remove-button" @click="$emit('remove')">×</button>
 
     <div v-if="isEditing" class="editor-popover">
-      <select
-        :value="chord.root"
-        @change="updateChord('root', $event.target.value)"
-        class="root-select"
-      >
-        <option v-for="note in NOTES" :key="note" :value="note.split(' / ')[0]">
-          {{ note }}
-        </option>
-      </select>
-
-      <div class="quality-selector">
-        <div class="category-tabs">
+      <div class="editor-content">
+        <div class="root-note-selector">
           <button
-            v-for="group in QUALITIES"
-            :key="group.label"
-            @click="activeQualityCategory = group.label"
-            :class="{ active: activeQualityCategory === group.label }"
+            v-for="note in NOTES"
+            :key="note"
+            @click="updateChord('root', getNoteValue(note))"
+            :class="{ active: chord.root === getNoteValue(note) }"
+            class="note-button"
           >
-            {{ group.label }}
+            {{ getNoteValue(note) }}
           </button>
         </div>
-        <div class="options-grid">
-          <button
-            v-for="option in activeQualityOptions"
-            :key="option.value"
-            @click="updateChord('quality', option.value)"
-            :class="{ active: chord.quality === option.value }"
-          >
-            {{ option.text }}
-          </button>
+
+        <div class="main-content">
+          <div class="quality-selector">
+            <div class="category-tabs">
+              <button
+                v-for="group in QUALITIES"
+                :key="group.label"
+                @click="activeQualityCategory = group.label"
+                :class="{ active: activeQualityCategory === group.label }"
+                class="category-tab"
+              >
+                {{ group.label }}
+              </button>
+            </div>
+            <div class="options-grid">
+              <button
+                v-for="option in activeQualityOptions"
+                :key="option.value"
+                @click="updateChord('quality', option.value)"
+                :class="{ active: chord.quality === option.value }"
+                class="option-button"
+              >
+                {{ option.text }}
+              </button>
+            </div>
+          </div>
+
+          <div class="inversion-control-footer">
+            <button
+              @click="changeInversion(-1)"
+              class="inversion-button"
+              :disabled="chord.inversion === 0"
+            >
+              -
+            </button>
+            <span>Position {{ chord.inversion + 1 }}</span>
+            <button
+              @click="changeInversion(1)"
+              class="inversion-button"
+              :disabled="chord.inversion === 3"
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
       <button @click="$emit('stop-editing')" class="close-editor">OK</button>
@@ -49,7 +73,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { QUALITIES, NOTES } from "@/constants.js";
-import PlayButton from "@/components/common/PlayButton.vue";
+import { getNotesForChord } from "@/sampler.js";
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -85,9 +109,9 @@ const activeQualityOptions = computed(() => {
 watch(
   () => props.isEditing,
   (isEditing) => {
-    if (isEditing && !activeQualityCategory.value) {
+    if (isEditing) {
       let foundCategory = null;
-      if (chord.value.quality !== null) {
+      if (chord.value.quality) {
         for (const group of QUALITIES) {
           if (group.options.some((opt) => opt.value === chord.value.quality)) {
             foundCategory = group.label;
@@ -95,16 +119,33 @@ watch(
           }
         }
       }
-      activeQualityCategory.value =
-        foundCategory || (QUALITIES.length > 0 ? QUALITIES[0].label : null);
-    } else if (!isEditing) {
+      activeQualityCategory.value = foundCategory || "Majeurs";
+    } else {
       activeQualityCategory.value = null;
     }
-  }
+  },
+  { immediate: true } // Assure que la logique s'exécute dès le montage si isEditing est vrai
 );
+
+function changeInversion(direction) {
+  const noteCount = getNotesForChord(chord.value).length;
+
+  const maxInversion = noteCount > 0 ? noteCount - 1 : 0;
+
+  const currentInversion = chord.value.inversion || 0;
+  const newInversion = currentInversion + direction;
+
+  if (newInversion >= 0 && newInversion <= maxInversion) {
+    updateChord("inversion", newInversion);
+  }
+}
 
 function updateChord(key, value) {
   emit("update:modelValue", { ...chord.value, [key]: value });
+}
+
+function getNoteValue(note) {
+  return note.split(" / ")[0];
 }
 </script>
 
@@ -127,9 +168,7 @@ function updateChord(key, value) {
 .chord-button:hover {
   border-color: #007bff;
 }
-.is-playing-halo {
-  box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
-}
+
 .remove-button {
   position: absolute;
   top: -10px;
@@ -148,37 +187,76 @@ function updateChord(key, value) {
   line-height: 1;
 }
 
+/* --- Fenêtre Pop-over --- */
 .editor-popover {
   position: absolute;
   top: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  background-color: #4a4a4a;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  width: 500px; /* Largeur ajustée pour un meilleur rendu */
+  background-color: #2c2c2e;
+  color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  width: 500px;
+  overflow: hidden; /* Empêche le contenu de déborder des coins arrondis */
 }
 
-.root-select {
-  background-color: #3c3c3c;
-  color: white;
-  border: 1px solid #555;
-  padding: 0.5rem;
-  border-radius: 4px;
-  width: 100%;
+/* --- Conteneur principal (2 colonnes) --- */
+.editor-content {
+  display: flex;
+  flex-direction: row; /* Garde la disposition en 2 colonnes */
+  max-height: 270px; /* Hauteur maximale du contenu éditable */
 }
 
-.quality-selector {
+/* --- Colonne de gauche (Notes) --- */
+.root-note-selector {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  overflow-y: auto;
+  border-right: 1px solid #444;
+  padding: 5px;
+  flex-shrink: 0;
+}
+.note-button {
+  background: none;
+  border: none;
+  color: #a9a9b0;
+  padding: 10px 20px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 1rem;
+  border-radius: 6px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.note-button:hover {
+  background-color: #3a3a3c;
+}
+.note-button.active {
+  background-color: #0a84ff;
+  color: white;
+  font-weight: bold;
 }
 
+.main-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* --- Section des qualités d'accords --- */
+.quality-selector {
+  flex-grow: 1;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .category-tabs {
   display: flex;
   overflow-x: auto;
@@ -220,22 +298,13 @@ function updateChord(key, value) {
 
 .options-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
   gap: 0.5rem;
-  max-height: 140px;
   overflow-y: auto;
   padding: 0.25rem;
 }
-.options-grid::-webkit-scrollbar {
-  width: 4px;
-}
-.options-grid::-webkit-scrollbar-thumb {
-  background-color: #888;
-  border-radius: 2px;
-}
-
 .options-grid button {
-  width: 70px;
+  width: 100%; /* S'adapte à la grille */
   padding: 0.5rem 0.25rem;
   border-radius: 4px;
   border: 1px solid #5f5f5f;
@@ -256,13 +325,52 @@ function updateChord(key, value) {
   font-weight: bold;
 }
 
-.close-editor {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background-color: #007bff;
-  border: 1px solid #007bff;
-  color: white;
-  border-radius: 4px;
+/* --- Footer des renversements (Styles corrigés pour le thème sombre) --- */
+.inversion-control-footer {
+  flex-shrink: 0; /* Empêche le footer de se réduire */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-top: 1px solid #444; /* Bordure plus adaptée au thème */
+  background-color: #2c2c2e;
+}
+.inversion-control-footer span {
+  font-weight: 500;
+  color: #d1d1d6; /* Texte clair visible sur fond sombre */
+}
+.inversion-button {
+  font-family: monospace;
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+  padding: 5px 15px;
+  border-radius: 8px;
+  border: 1px solid #5f5f5f;
+  background-color: #4a4a4a; /* Fond adapté */
+  color: white; /* Texte blanc */
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+.inversion-button:hover {
+  background-color: #5f5f5f;
+}
+.inversion-button:active {
+  background-color: #3a3a3c;
+}
+
+/* --- Bouton de fermeture "OK" --- */
+.close-editor {
+  padding: 12px;
+  background-color: #0a84ff;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+.close-editor:hover {
+  background-color: #0073e6;
 }
 </style>

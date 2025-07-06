@@ -47,57 +47,67 @@ export const piano = new Tone.Sampler({
   baseUrl: "https://tonejs.github.io/audio/salamander/",
 }).chain(eq, compressor, reverb);
 
+function noteToMidi(note) {
+  const octave = parseInt(note.slice(-1));
+  const noteName = note.slice(0, -1);
+  const noteIndex = ALL_NOTES_FLAT.indexOf(noteName);
+  return octave * 12 + noteIndex;
+}
+
 /**
  * Calculates the notes for a given chord, keeping them in a balanced, centered range.
  * @param {object} chord - The chord object with { root, quality }.
  * @returns {string[]} An array of notes (e.g., ["C4", "E4", "G4"]).
  */
-function getNotesForChord(chord) {
+export function getNotesForChord(chord, previousNotes = null) {
   const intervals = CHORD_FORMULAS[chord.quality];
   if (!intervals) return [];
-
   const rootIndex = ALL_NOTES_FLAT.indexOf(chord.root);
   if (rootIndex === -1) return [];
 
-  let baseOctave = 4;
-  if (["G", "A", "B"].some((n) => chord.root.startsWith(n))) {
+  let baseOctave;
+
+  if (!previousNotes || previousNotes.length === 0) {
     baseOctave = 3;
+  } else {
+    const previousRootMidi = noteToMidi(previousNotes[0]);
+    let bestOctave = -1;
+    let minDistance = Infinity;
+
+    for (let octave = 2; octave <= 5; octave++) {
+      const currentRootMidi = octave * 12 + rootIndex;
+      const distance = Math.abs(currentRootMidi - previousRootMidi);
+      if (distance < minDistance) {
+        minDistance = distance;
+        bestOctave = octave;
+      }
+    }
+    baseOctave = bestOctave;
   }
 
   let notes = intervals.map((interval) => {
     const noteIndex = (rootIndex + interval) % 12;
     const octave = baseOctave + Math.floor((rootIndex + interval) / 12);
-    return {
-      name: ALL_NOTES_FLAT[noteIndex],
-      octave: octave,
-    };
+    return { name: ALL_NOTES_FLAT[noteIndex], octave: octave };
   });
 
   const inversion = chord.inversion || 0;
-
   if (inversion > 0 && inversion < notes.length) {
     for (let i = 0; i < inversion; i++) {
-      if (notes[i]) {
-        notes[i].octave += 1;
-      }
+      if (notes[i]) notes[i].octave += 1;
     }
   } else if (inversion < 0 && Math.abs(inversion) < notes.length) {
     const numToDrop = Math.abs(inversion);
     for (let i = 0; i < numToDrop; i++) {
       const noteIndex = notes.length - 1 - i;
-      if (notes[noteIndex]) {
-        notes[noteIndex].octave -= 1;
-      }
+      if (notes[noteIndex]) notes[noteIndex].octave -= 1;
     }
   }
 
-  // 3. Trier les notes par hauteur et formater la sortie
   return notes
     .sort(
       (a, b) =>
-        a.octave * 12 +
-        ALL_NOTES_FLAT.indexOf(a.name) -
-        (b.octave * 12 + ALL_NOTES_FLAT.indexOf(b.name))
+        noteToMidi(`${a.name}${a.octave}`) - noteToMidi(`${b.name}${b.octave}`)
     )
     .map((note) => `${note.name}${note.octave}`);
 }

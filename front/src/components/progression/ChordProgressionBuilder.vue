@@ -25,6 +25,7 @@
       </v-tooltip>
     </div>
     <div class="progression-builder">
+      <PianoKeyboard :active-notes="selectedChordNotes" />
       <draggable
         v-model="progression"
         item-key="id"
@@ -43,9 +44,10 @@
             @stop-editing="stopEditing"
           />
         </template>
+        <template #footer>
+          <button class="add-button" @click="addChord()">+</button>
+        </template>
       </draggable>
-
-      <button class="add-button" @click="addChord()">+</button>
     </div>
 
     <div class="analyze-button-container">
@@ -80,9 +82,10 @@ import draggable from "vuedraggable";
 import * as Tone from "tone";
 import { mdiPlay, mdiStop } from "@mdi/js";
 
-import { piano } from "@/sampler.js";
+import { piano, getNotesForChord } from "@/sampler.js";
 import { sleep } from "@/utils.js";
 import { useAnalysisStore } from "@/stores/analysis.js";
+import PianoKeyboard from "@/components/common/PianoKeyboard.vue";
 import ChordCard from "@/components/progression/ChordCard.vue";
 
 const analysisStore = useAnalysisStore();
@@ -96,6 +99,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "analyze"]);
 
 const editingChordId = ref(null);
+const selectedChordNotes = ref([]);
 const isPlaying = ref(false);
 const currentlyPlayingIndex = ref(null);
 
@@ -116,7 +120,7 @@ const isProgressionUnchanged = computed(() => {
 });
 
 function addChord() {
-  const newChord = { id: Date.now(), root: "C", quality: "" };
+  const newChord = { id: Date.now(), root: "C", quality: "", inversion: 0 };
   progression.value = [...progression.value, newChord];
   startEditing(newChord);
 }
@@ -133,6 +137,7 @@ function updateChord(index, newChord) {
   newProgression[index] = newChord;
   progression.value = newProgression;
   piano.play(newChord);
+  selectedChordNotes.value = getNotesForChord(newChord);
 }
 
 function startEditing(chord) {
@@ -161,6 +166,7 @@ const playEntireProgression = async () => {
       if (!item) continue;
       currentlyPlayingIndex.value = index;
       piano.play(item);
+      selectedChordNotes.value = getNotesForChord(item);
       await sleep(1000);
     }
     currentlyPlayingIndex.value = null;
@@ -225,7 +231,11 @@ function stopSound() {
 .draggable-container {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 1rem;
+}
+.is-playing-halo {
+  box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
 }
 .ghost {
   opacity: 0.5;
