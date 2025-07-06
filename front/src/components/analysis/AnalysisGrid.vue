@@ -2,6 +2,17 @@
   <div class="detailed-analysis-container">
     <div class="analysis-header">
       <h3 class="analysis-grid-title">{{ title }}</h3>
+      <div v-if="!isSubstitution" class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background-color: #2ecc71"></div>
+          <span>Diatonique</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background-color: #f1c40f"></div>
+          <div class="legend-dot" style="background-color: #e74c3c"></div>
+          <span>Emprunts</span>
+        </div>
+      </div>
       <div class="header-controls">
         <v-tooltip v-if="!isPlaying" location="top" text="Lire la progression">
           <template #activator="{ props }">
@@ -186,6 +197,26 @@ function stopSound() {
 .header-controls {
   display: flex;
   gap: 0.5rem;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 13px;
+  color: #bdc3c7;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
 .control-icon-button {

@@ -137,7 +137,9 @@ function getChordClass(item) {
   return {
     // Un accord étranger contient un bémol dans son chiffrage (ex: bIII, bVI)
     foreign_chord:
-      !item.is_diatonic && hasFoundNumeral && item.found_numeral.includes("b"),
+      !item.is_diatonic &&
+      hasFoundNumeral &&
+      (item.found_numeral.includes("b") || item.found_numeral.includes("#")),
 
     // Un accord d'emprunt est un accord non-diatonique pour lequel l'analyseur
     // a trouvé une correspondance attendue dans le mode parallèle.
@@ -147,7 +149,9 @@ function getChordClass(item) {
     substitution_chord:
       !item.is_diatonic &&
       !item.expected_chord_name &&
-      (!hasFoundNumeral || !item.found_numeral.includes("b")),
+      (!hasFoundNumeral ||
+        (!item.found_numeral.includes("b") &&
+          !item.found_numeral.includes("#"))),
   };
 }
 </script>
