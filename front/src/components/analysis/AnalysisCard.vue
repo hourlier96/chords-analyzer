@@ -153,7 +153,7 @@ function extractChordComponents(data) {
   align-items: center;
   box-sizing: border-box;
   min-width: 70px;
-  height: 50px;
+  height: 30px;
   padding: 0.5rem;
   border-radius: 6px;
   background-color: #4f3b78;

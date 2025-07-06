@@ -198,7 +198,12 @@ const playEntireProgression = async () => {
         if (!rootMatch) return null;
         const root = rootMatch[0];
         const quality = chordStr.substring(root.length);
-        return { root, quality };
+        return {
+          root,
+          quality,
+          inversion:
+            props.analysis.result.quality_analysis[index]?.inversion || 0,
+        };
       };
 
       if (showSecondaryDominants.value) {
@@ -208,7 +213,7 @@ const playEntireProgression = async () => {
           if (secondaryChordObject) {
             piano.play(secondaryChordObject);
           }
-          await sleep(800);
+          await sleep(1000);
         }
       }
 
@@ -388,12 +393,10 @@ button.control-icon-button:has(.v-icon) {
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 12px; /* Add a radius to the container for the shadow */
-  /* ✨ NEW: Add a transition for the box-shadow property. */
+  border-radius: 12px;
   transition: box-shadow 0.3s ease-in-out;
 }
 
-/* ✨ NEW: Define the halo effect for the active card. */
 .chord-progression-group.is-playing-halo {
   box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
 }
