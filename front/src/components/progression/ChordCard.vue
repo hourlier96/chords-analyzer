@@ -210,7 +210,8 @@ function getNoteValue(note) {
   top: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  width: 500px; /* Largeur ajustée pour un meilleur rendu */
+  border: 1px solid #555555;
+  width: 640px;
   background-color: #2c2c2e;
   color: white;
   border-radius: 12px;
@@ -218,7 +219,7 @@ function getNoteValue(note) {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Empêche le contenu de déborder des coins arrondis */
+  overflow: hidden;
 }
 
 /* --- Conteneur principal (2 colonnes) --- */
