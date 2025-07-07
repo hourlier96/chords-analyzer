@@ -64,6 +64,7 @@ CORE_QUALITIES = {
     "7b5": "dominant",
     "7#5": "dominant",
     "7b9": "dominant",
+    "7b13": "dominant",
     "7#9": "dominant",
     "7#11": "dominant",
     "13#11": "dominant",

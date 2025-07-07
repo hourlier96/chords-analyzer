@@ -44,14 +44,14 @@ export const QUALITIES = [
     options: [
       { value: "", text: "Majeur" },
       { value: "6", text: "Majeur 6" },
-      { value: "maj7", text: "Majeur 7" },
-      { value: "maj7b5", text: "Majeur 7b5" },
-      { value: "maj7#5", text: "Majeur 7#5" },
-      { value: "maj7#11", text: "Majeur 7#11" },
       { value: "add9", text: "Add 9" },
       { value: "6/9", text: "Majeur 6/9" },
+      { value: "maj7", text: "Majeur 7" },
       { value: "maj9", text: "Majeur 9" },
       { value: "maj13", text: "Majeur 13" },
+      { value: "maj7#5", text: "Majeur 7#5" }, // Augmented Major
+      { value: "maj7b5", text: "Majeur 7b5" }, // Lydian dominant related
+      { value: "maj7#11", text: "Majeur 7#11" }, // Lydian related
     ],
   },
   {
@@ -59,16 +59,16 @@ export const QUALITIES = [
     options: [
       { value: "m", text: "Mineur" },
       { value: "m6", text: "Mineur 6" },
-      { value: "m7", text: "Mineur 7" },
-      { value: "m(maj7)", text: "m(maj7)" },
       { value: "m(add9)", text: "m(add9)" },
+      { value: "m7", text: "Mineur 7" },
       { value: "m9", text: "Mineur 9" },
       { value: "m11", text: "Mineur 11" },
       { value: "m13", text: "Mineur 13" },
+      { value: "m(maj7)", text: "m(maj7)" },
     ],
   },
   {
-    label: "Dominante",
+    label: "Dominantes",
     options: [
       { value: "7", text: "7" },
       { value: "9", text: "9" },
@@ -79,17 +79,17 @@ export const QUALITIES = [
       { value: "7b9", text: "7♭9" },
       { value: "7#9", text: "7♯9" },
       { value: "7#11", text: "7♯11" },
+      { value: "7b13", text: "7♭13" },
       { value: "13#11", text: "13♯11" },
     ],
   },
   {
-    label: "Altérés",
+    label: "Dominantes Altérées",
     options: [
       { value: "7b9b5", text: "7♭9♭5" },
       { value: "7b9#5", text: "7♭9♯5" },
       { value: "7#9b5", text: "7♯9♭5" },
       { value: "7#9#5", text: "7♯9♯5" },
-      { value: "7b9#9", text: "7♭9♯9" },
       { value: "7b9#11", text: "7♭9♯11" },
       { value: "7#9#11", text: "7♯9♯11" },
       { value: "7b9b13", text: "7♭9♭13" },
@@ -111,12 +111,18 @@ export const QUALITIES = [
     label: "Diminués",
     options: [
       { value: "dim", text: "Diminué" },
-      { value: "m7b5", text: "m7b5" },
       { value: "dim7", text: "Diminué 7" },
+      { value: "m7b5", text: "m7b5" }, // Half-diminished often grouped here
     ],
   },
-  { label: "Augmentés", options: [{ value: "aug", text: "Augmenté" }] },
-  { label: "Autres", options: [{ value: "5", text: "Power Chord" }] },
+  {
+    label: "Augmentés",
+    options: [{ value: "aug", text: "Augmenté" }],
+  },
+  {
+    label: "Autres",
+    options: [{ value: "5", text: "Power Chord" }],
+  },
 ];
 
 export const CHORD_FORMULAS = {
@@ -158,6 +164,7 @@ export const CHORD_FORMULAS = {
   "7b5": [0, 4, 6, 10],
   "7#5": [0, 4, 8, 10],
   "7b9": [0, 4, 7, 10, 13],
+  "7b13": [0, 4, 7, 10, 20],
   "7#9": [0, 4, 7, 10, 15],
   "7#11": [0, 4, 7, 10, 18],
   "7alt": [0, 4, 10, 13, 18],
