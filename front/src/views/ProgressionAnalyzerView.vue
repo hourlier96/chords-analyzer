@@ -16,6 +16,31 @@
           <v-card-title class="text-h5"> Paramètres </v-card-title>
           <v-card-text>
             <div class="setting-item-modal">
+              Affichage des notes
+              <v-tooltip
+                location="top"
+                :text="
+                  settingsStore.showNotes
+                    ? 'Cacher les notes des accords'
+                    : 'Afficher les notes des accords'
+                "
+              >
+                <template #activator="{ props: tooltipProps }">
+                  <button
+                    v-bind="tooltipProps"
+                    @click="settingsStore.toggleShowNotes()"
+                    class="control-icon-button"
+                  >
+                    <v-icon
+                      :icon="
+                        settingsStore.showNotes ? mdiMusicNote : mdiMusicNoteOff
+                      "
+                    />
+                  </button>
+                </template>
+              </v-tooltip>
+            </div>
+            <div class="setting-item-modal">
               Mode de lecture audio
               <v-tooltip
                 location="top"
@@ -111,7 +136,7 @@
                         class="control-icon-button"
                         :class="{ 'is-active': activeMode }"
                       >
-                        <v-icon :icon="mdiSync" />
+                        <v-icon :icon="mdiPlaylistMusic" />
                       </button>
                     </template>
                     <v-list density="compact" class="modal-list">
@@ -168,17 +193,21 @@ import {
   mdiWaveform,
   mdiMusicCircle,
   mdiCog,
-  mdiSync,
+  mdiPlaylistMusic,
   mdiClose,
+  mdiMusicNote,
+  mdiMusicNoteOff,
 } from "@mdi/js";
 
 import { useAnalysisStore } from "@/stores/analysis.js";
+import { useSettingsStore } from "@/stores/settings.js";
 import { piano, playbackMode, setPlaybackMode } from "@/sampler.js";
 
 import AnalysisGrid from "@/components/analysis/AnalysisGrid.vue";
 import ChordProgressionBuilder from "@/components/progression/ChordProgressionBuilder.vue";
 
 const analysisStore = useAnalysisStore();
+const settingsStore = useSettingsStore();
 
 const isSettingsOpen = ref(false);
 

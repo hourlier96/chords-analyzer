@@ -2,6 +2,16 @@
   <div class="chord-slot">
     <button class="chord-button" @click="$emit('start-editing')">
       {{ chordDisplayName }}
+      <div
+        v-if="settingsStore.showNotes"
+        style="font-size: 18px; font-style: italic"
+      >
+        {{
+          getNotesForChord(chord)
+            .map((note) => note.replace(/[0-9]/g, ""))
+            .join(" - ")
+        }}
+      </div>
     </button>
 
     <button class="remove-button" @click="$emit('remove')">×</button>
@@ -87,6 +97,9 @@
 import { ref, computed, watch } from "vue";
 import { QUALITIES, NOTES } from "@/constants.js";
 import { getNotesForChord } from "@/sampler.js";
+import { useSettingsStore } from "@/stores/settings.js";
+
+const settingsStore = useSettingsStore();
 
 const props = defineProps({
   modelValue: { type: Object, required: true },

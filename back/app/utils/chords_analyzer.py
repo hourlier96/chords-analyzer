@@ -46,6 +46,7 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
         )
         suffix_map = {
             "maj7": "maj7",
+            "maj7b5": "maj7b5",
             "maj7#5": "maj7#5",
             "maj9": "maj9",
             "m7": "7",

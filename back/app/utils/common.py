@@ -222,6 +222,7 @@ def get_chord_notes(chord_name: str) -> list[str] | None:
         "7sus2": [0, 2, 7, 10],
         "7sus4": [0, 5, 7, 10],
         "9sus4": [0, 5, 7, 10, 14],
+        "13sus4": [0, 5, 7, 10, 14, 21],
         # --- Accords "add" ---
         "add9": [0, 4, 7, 14],
         "m(add9)": [0, 3, 7, 14],
@@ -236,7 +237,9 @@ def get_chord_notes(chord_name: str) -> list[str] | None:
         "dim7": [0, 3, 6, 9],
         "m7b5": [0, 3, 6, 10],
         "m(maj7)": [0, 3, 7, 11],
+        "maj7b5": [0, 4, 6, 11],
         "maj7#5": [0, 4, 8, 11],
+        "maj7#11": [0, 4, 7, 11, 18],
         # --- Accords de dominante altérés ---
         "7b5": [0, 4, 6, 10],
         "7#5": [0, 4, 8, 10],
@@ -262,6 +265,7 @@ def get_chord_notes(chord_name: str) -> list[str] | None:
         "m11": [0, 3, 7, 10, 14, 17],
         # --- Accords de 13ème ---
         "13": [0, 4, 7, 10, 14, 21],
+        "13#11": [0, 4, 7, 10, 14, 18, 21],
         "m13": [0, 3, 7, 10, 14, 21],
         "maj13": [0, 4, 7, 11, 14, 21],
     }

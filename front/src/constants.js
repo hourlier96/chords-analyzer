@@ -45,11 +45,13 @@ export const QUALITIES = [
       { value: "", text: "Majeur" },
       { value: "6", text: "Majeur 6" },
       { value: "maj7", text: "Majeur 7" },
+      { value: "maj7b5", text: "Majeur 7b5" },
+      { value: "maj7#5", text: "Majeur 7#5" },
+      { value: "maj7#11", text: "Majeur 7#11" },
       { value: "add9", text: "Add 9" },
       { value: "6/9", text: "Majeur 6/9" },
       { value: "maj9", text: "Majeur 9" },
       { value: "maj13", text: "Majeur 13" },
-      { value: "maj7#5", text: "Majeur 7#5" },
     ],
   },
   {
@@ -77,6 +79,7 @@ export const QUALITIES = [
       { value: "7b9", text: "7♭9" },
       { value: "7#9", text: "7♯9" },
       { value: "7#11", text: "7♯11" },
+      { value: "13#11", text: "13♯11" },
     ],
   },
   {
@@ -101,6 +104,7 @@ export const QUALITIES = [
       { value: "7sus2", text: "7sus2" },
       { value: "7sus4", text: "7sus4" },
       { value: "9sus4", text: "9sus4" },
+      { value: "13sus4", text: "13sus4" },
     ],
   },
   {
@@ -132,6 +136,7 @@ export const CHORD_FORMULAS = {
   "7sus2": [0, 2, 7, 10],
   "7sus4": [0, 5, 7, 10],
   "9sus4": [0, 5, 7, 10, 14],
+  "13sus4": [0, 5, 7, 10, 14, 21],
 
   add9: [0, 4, 7, 14],
   "m(add9)": [0, 3, 7, 14],
@@ -146,7 +151,9 @@ export const CHORD_FORMULAS = {
   dim7: [0, 3, 6, 9],
   m7b5: [0, 3, 6, 10],
   "m(maj7)": [0, 3, 7, 11],
+  maj7b5: [0, 4, 6, 11],
   "maj7#5": [0, 4, 8, 11],
+  "maj7#11": [0, 4, 7, 11, 18],
 
   "7b5": [0, 4, 6, 10],
   "7#5": [0, 4, 8, 10],
@@ -169,6 +176,7 @@ export const CHORD_FORMULAS = {
   11: [0, 4, 7, 10, 14, 17],
   m11: [0, 3, 7, 10, 14, 17],
   13: [0, 4, 7, 10, 14, 21],
+  "13#11": [0, 4, 7, 10, 14, 18, 21],
   m13: [0, 3, 7, 10, 14, 21],
   maj13: [0, 4, 7, 11, 14, 21],
 };
