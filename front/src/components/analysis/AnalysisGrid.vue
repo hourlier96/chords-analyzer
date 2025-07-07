@@ -147,11 +147,13 @@ const displayedProgression = computed(() => {
 
   return props.progressionItems.map((item, index) => {
     const isOriginallyDiatonic = originalModeChords[index] !== null;
-    const newChord = newModeChords[index];
-    if (isOriginallyDiatonic && newChord) {
+    const newChordData = newModeChords[index];
+    if (isOriginallyDiatonic && newChordData) {
       return {
         ...item,
-        chord: newChord,
+        ...newChordData,
+        found_numeral:
+          newChordData.chord !== "N/A" ? newChordData.found_numeral : null,
       };
     } else {
       return item;

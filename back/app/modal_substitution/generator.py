@@ -44,6 +44,7 @@ def get_substitutions(
     base_progression,
     relative_tonic_index,
     degrees_to_borrow,
+    mode_name="Ionian",
 ):
     """
     Crée une liste d'accords de substitution à partir d'une liste de degrés,
@@ -83,7 +84,7 @@ def get_substitutions(
         borrowed_chords.append(
             {
                 "chord": get_diatonic_7th_chord(
-                    degree_index, relative_tonic_index, "Ionian"
+                    degree_index, relative_tonic_index, mode_name
                 ),
                 "roman": roman_numeral,
                 "quality": quality,

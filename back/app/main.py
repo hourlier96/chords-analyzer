@@ -49,8 +49,8 @@ def get_all_substitutions(request: ProgressionRequest):
     try:
         # Find tonic with IA
         tonic, mode, explanations = detect_tonic_and_mode(progression)
-        # tonic = "A#"
-        # mode = "Aeolian"
+        # tonic = "F"
+        # mode = "Lydien"
         # explanations = "balbla"
         detected_tonic_index = get_note_index(tonic)
 
@@ -82,9 +82,14 @@ def get_all_substitutions(request: ProgressionRequest):
         harmonized_chords = {}
         for mode_name, (_, _, interval) in MODES_DATA.items():
             tonic_index = get_note_index(tonic_name)
+
+            tonic_index = get_note_index(tonic_name)
+            new_progression = get_substitutions(
+                progression, tonic_index, degrees_to_borrow, mode_name
+            )
             harmonized_chords[mode_name] = [
-                get_diatonic_7th_chord(deg, tonic_index, mode_name)
-                for deg in degrees_to_borrow
+                analyze_chord_in_context(item["chord"], tonic_index, mode_name)
+                for item in new_progression
             ]
 
         # Get all secondary dominants for all major modes

@@ -93,16 +93,11 @@ function extractChordComponents(data) {
 }
 
 function getChordClass(item) {
-  const hasFoundNumeral = item && typeof item.found_numeral === "string";
-
   return {
     // Un accord d'emprunt est un accord non-diatonique pour lequel l'analyseur
     // a trouvé une correspondance attendue dans le mode parallèle.
     borrowed_chord: !item.is_diatonic && borrowedInfo,
-    substitution_chord:
-      !item.is_diatonic &&
-      !item.expected_chord_name &&
-      (!hasFoundNumeral || !item.found_numeral.includes("b")),
+    substitution_chord: props.isSubstitution,
   };
 }
 </script>
