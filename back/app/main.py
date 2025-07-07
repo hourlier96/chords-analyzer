@@ -71,7 +71,6 @@ def get_all_substitutions(request: ProgressionRequest):
             relative_tonic_index = (detected_tonic_index + interval + 12) % 12
             new_progression = get_substitutions(
                 progression,
-                mode_name,
                 relative_tonic_index,
                 degrees_to_borrow,
             )

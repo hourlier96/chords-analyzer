@@ -42,13 +42,16 @@ def get_degrees_to_borrow(quality_analysis: list[dict]) -> list[int | None]:
 
 def get_substitutions(
     base_progression,
-    mode_name,
     relative_tonic_index,
     degrees_to_borrow,
 ):
     """
     Crée une liste d'accords de substitution à partir d'une liste de degrés,
-    en les enrichissant avec le chiffrage romain et la qualité du mode fournit.
+    en les enrichissant avec le chiffrage romain et la qualité de la gamme majeure relative du mode fournit.
+
+    Pour mode_name="Phrygian" : La variable relative_tonic_index pointera correctement vers G#.
+    Construction de l'accord : get_diatonic_7th_chord sera appelé avec la tonique G# et le mode "Ionian".
+    Il construira donc les accords de la gamme de G# Majeur.
 
     Args:
         base_progression (list): La progression originale (utilisée pour la longueur).
@@ -59,7 +62,7 @@ def get_substitutions(
         list: Une liste de dictionnaires, chaque dictionnaire représentant un accord
               substitué avec son nom, son degré, son chiffrage romain et sa qualité.
     """
-    mode_qualities = MAJOR_MODES_DATA[mode_name][1]
+    mode_qualities = MAJOR_MODES_DATA["Ionian"][1]
     borrowed_chords = []
     for degree_index in degrees_to_borrow:
         if not degree_index:
@@ -76,8 +79,7 @@ def get_substitutions(
         borrowed_chords.append(
             {
                 "chord": get_diatonic_7th_chord(
-                    degree_index,
-                    relative_tonic_index,
+                    degree_index, relative_tonic_index, "Ionian"
                 ),
                 "roman": roman_numeral,
                 "quality": quality,
