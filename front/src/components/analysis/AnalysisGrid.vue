@@ -118,7 +118,7 @@ const props = defineProps({
 });
 
 // État pour le mode sélectionné, initialisé avec le nom du mode de la prop 'title'
-const selectedMode = ref(props.title.split(" ")[1]);
+const selectedMode = ref(null);
 
 // Extrait la note racine (ex: "A#") du titre
 const rootNote = computed(() => props.title.split(" ")[0]);

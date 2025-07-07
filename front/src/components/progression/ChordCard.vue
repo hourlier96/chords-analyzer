@@ -9,15 +9,28 @@
     <div v-if="isEditing" class="editor-popover">
       <div class="editor-content">
         <div class="root-note-selector">
-          <button
-            v-for="note in NOTES"
-            :key="note"
-            @click="updateChord('root', getNoteValue(note))"
-            :class="{ active: chord.root === getNoteValue(note) }"
-            class="note-button"
-          >
-            {{ getNoteValue(note) }}
-          </button>
+          <template v-for="note in NOTES" :key="note">
+            <div v-if="note.includes(' / ')" class="enharmonic-pair">
+              <button
+                v-for="enharmonicNote in note.split(' / ')"
+                :key="enharmonicNote"
+                @click="updateChord('root', enharmonicNote)"
+                :class="{ active: isNoteActive(enharmonicNote) }"
+                class="note-button"
+              >
+                {{ enharmonicNote }}
+              </button>
+            </div>
+
+            <button
+              v-else
+              @click="updateChord('root', note)"
+              :class="{ active: isNoteActive(note) }"
+              class="note-button"
+            >
+              {{ note }}
+            </button>
+          </template>
         </div>
 
         <div class="main-content">
@@ -127,6 +140,10 @@ watch(
   { immediate: true } // Assure que la logique s'exécute dès le montage si isEditing est vrai
 );
 
+function isNoteActive(note) {
+  return chord.value.root === getNoteValue(note);
+}
+
 function changeInversion(direction) {
   const noteCount = getNotesForChord(chord.value).length;
 
@@ -224,7 +241,7 @@ function getNoteValue(note) {
   background: none;
   border: none;
   color: #a9a9b0;
-  padding: 10px 20px;
+  padding: 5px 10px;
   cursor: pointer;
   text-align: center;
   font-size: 1rem;

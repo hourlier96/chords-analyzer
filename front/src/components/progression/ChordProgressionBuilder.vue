@@ -1,53 +1,109 @@
 <template>
   <div class="builder-container">
-    <div class="header-controls">
-      <v-tooltip v-if="!isPlaying" location="top" text="Lire la progression">
-        <template #activator="{ props }">
-          <button
-            v-bind="props"
-            @click="playEntireProgression"
-            class="control-icon-button"
-          >
-            <v-icon :icon="mdiPlay" />
-          </button>
-        </template>
-      </v-tooltip>
-      <v-tooltip v-else location="top" text="Stopper la lecture">
-        <template #activator="{ props }">
-          <button
-            v-bind="props"
-            @click="stopSound()"
-            class="control-icon-button"
-          >
-            <v-icon :icon="mdiStop" />
-          </button>
-        </template>
-      </v-tooltip>
-    </div>
     <div class="progression-builder">
       <PianoKeyboard :active-notes="selectedChordNotes" />
-      <draggable
-        v-model="progression"
-        item-key="id"
-        class="draggable-container"
-        ghost-class="ghost"
-      >
-        <template #item="{ element: chord, index }">
-          <ChordCard
-            :modelValue="chord"
-            @update:modelValue="(newChord) => updateChord(index, newChord)"
-            :is-editing="editingChordId === chord.id"
-            :piano="piano"
-            :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
-            @remove="removeChord(chord.id)"
-            @start-editing="startEditing(chord)"
-            @stop-editing="stopEditing"
-          />
-        </template>
-        <template #footer>
-          <button class="add-button" @click="addChord()">+</button>
-        </template>
-      </draggable>
+
+      <div class="main-row">
+        <div class="header-controls">
+          <div v-if="!isPlaying" class="d-flex ga-2">
+            <v-tooltip location="top" text="Lire la progression">
+              <template #activator="{ props }">
+                <button
+                  v-bind="props"
+                  @click="playEntireProgression"
+                  class="control-icon-button"
+                >
+                  <v-icon :icon="mdiPlay" />
+                </button>
+              </template>
+            </v-tooltip>
+          </div>
+          <v-tooltip v-else location="top" text="Stopper la lecture">
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                @click="stopSound()"
+                class="control-icon-button"
+              >
+                <v-icon :icon="mdiStop" />
+              </button>
+            </template>
+          </v-tooltip>
+          <v-tooltip location="top" text="Reset la progression">
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                @click="removeAllChords()"
+                class="control-icon-button"
+              >
+                <v-icon :icon="mdiClose" />
+              </button>
+            </template>
+          </v-tooltip>
+        </div>
+
+        <draggable
+          v-model="progression"
+          item-key="id"
+          class="draggable-container"
+          ghost-class="ghost"
+        >
+          <template #item="{ element: chord, index }">
+            <ChordCard
+              :modelValue="chord"
+              @update:modelValue="(newChord) => updateChord(index, newChord)"
+              :is-editing="editingChordId === chord.id"
+              :piano="piano"
+              :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
+              @remove="removeChord(chord.id)"
+              @start-editing="startEditing(chord)"
+              @stop-editing="stopEditing"
+            />
+          </template>
+          <template #footer>
+            <div class="footer-controls">
+              <button
+                v-if="!showQuickImport"
+                class="add-button"
+                @click="addChord()"
+              >
+                +
+              </button>
+              <v-tooltip location="top" text="Import rapide">
+                <template #activator="{ props: tooltipProps }">
+                  <button
+                    v-if="!showQuickImport"
+                    v-bind="tooltipProps"
+                    class="add-button"
+                    @click="showQuickImport = true"
+                  >
+                    <v-icon :icon="mdiKeyboard" />
+                  </button>
+                </template>
+              </v-tooltip>
+
+              <div v-if="showQuickImport" class="quick-import-container">
+                <input
+                  type="text"
+                  v-model="quickImportText"
+                  placeholder="Ex: Cmaj7; G7; Am7; F"
+                  class="quick-import-input"
+                  @keyup.enter="processQuickImport"
+                />
+                <button @click="processQuickImport" class="quick-import-button">
+                  <v-icon :icon="mdiCheck" />
+                </button>
+                <button
+                  @click="cancelQuickImport"
+                  class="quick-import-button cancel"
+                >
+                  <v-icon :icon="mdiClose" />
+                </button>
+              </div>
+            </div>
+          </template>
+        </draggable>
+      </div>
     </div>
 
     <div class="analyze-button-container">
@@ -77,10 +133,11 @@
 </template>
 
 <script setup>
+// Le script reste exactement le même
 import { ref, computed } from "vue";
 import draggable from "vuedraggable";
 import * as Tone from "tone";
-import { mdiPlay, mdiStop } from "@mdi/js";
+import { mdiPlay, mdiStop, mdiKeyboard, mdiCheck, mdiClose } from "@mdi/js";
 
 import { piano, getNotesForChord } from "@/sampler.js";
 import { sleep } from "@/utils.js";
@@ -102,6 +159,8 @@ const editingChordId = ref(null);
 const selectedChordNotes = ref([]);
 const isPlaying = ref(false);
 const currentlyPlayingIndex = ref(null);
+const showQuickImport = ref(false);
+const quickImportText = ref("");
 
 const progression = computed({
   get: () => props.modelValue,
@@ -152,6 +211,45 @@ function onAnalyze() {
   emit("analyze", progression.value);
 }
 
+function parseChordString(chordStr) {
+  if (!chordStr) return null;
+  const rootMatch = chordStr.match(/^[A-G][#b]?/);
+  if (!rootMatch) return null;
+
+  const root = rootMatch[0];
+  const quality = chordStr.substring(root.length);
+
+  return { id: Date.now() + Math.random(), root, quality, inversion: 0 };
+}
+
+function removeAllChords() {
+  progression.value = [];
+  stopEditing();
+  selectedChordNotes.value = [];
+}
+
+function processQuickImport() {
+  if (!quickImportText.value.trim()) return;
+
+  const newChords = quickImportText.value
+    .split(";")
+    .map((str) => str.trim())
+    .filter((str) => str)
+    .map(parseChordString)
+    .filter((chord) => chord);
+
+  if (newChords.length > 0) {
+    progression.value = [...progression.value, ...newChords];
+  }
+
+  cancelQuickImport();
+}
+
+function cancelQuickImport() {
+  showQuickImport.value = false;
+  quickImportText.value = "";
+}
+
 const playEntireProgression = async () => {
   if (isPlaying.value) return;
 
@@ -191,17 +289,27 @@ function stopSound() {
   border-radius: 8px;
   margin-bottom: 2rem;
 }
+
+/* MODIFIÉ : Le conteneur principal devient une colonne flex */
 .progression-builder {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 1.5rem; /* Espace entre le piano et la rangée principale */
 }
 
+/* NOUVEAU : La rangée principale qui aligne les contrôles et les accords */
+.main-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* MODIFIÉ : Le conteneur des boutons est maintenant un élément flex */
 .header-controls {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 10px;
+  flex-shrink: 0; /* Empêche les boutons de se compresser */
 }
 
 .header-controls .control-icon-button {
@@ -211,28 +319,23 @@ function stopSound() {
   border-radius: 50%;
   width: 40px;
   height: 40px;
-  padding: 0;
-  font-weight: bold;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 1rem;
   cursor: pointer;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
   display: flex;
   justify-content: center;
   align-items: center;
 }
-
 .header-controls .control-icon-button:hover:not(:disabled) {
   background-color: #5a5a5a;
   border-color: #777;
 }
+
+/* MODIFIÉ : La zone des accords peut maintenant s'étendre */
 .draggable-container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
+  flex-grow: 1; /* Permet à la zone des accords de prendre l'espace restant */
 }
 .is-playing-halo {
   box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
@@ -241,6 +344,11 @@ function stopSound() {
   opacity: 0.5;
   background: #4a4a4a;
   border: 2px dashed #007bff;
+}
+.footer-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 .add-button {
   width: 50px;
@@ -252,6 +360,9 @@ function stopSound() {
   color: #888;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 .add-button:hover {
   background-color: #3c3c3c;
@@ -259,6 +370,37 @@ function stopSound() {
   border-color: #888;
 }
 
+.quick-import-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.quick-import-input {
+  background-color: #3c3c3c;
+  border: 1px solid #555;
+  color: white;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  width: 300px;
+}
+.quick-import-input::placeholder {
+  color: #888;
+}
+.quick-import-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background-color: #4caf50;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.quick-import-button.cancel {
+  background-color: #f44336;
+}
 .analyze-button-container {
   margin-top: 2rem;
   text-align: center;

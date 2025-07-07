@@ -1,6 +1,10 @@
 import { ref } from "vue";
 import * as Tone from "tone";
-import { ALL_NOTES_FLAT, CHORD_FORMULAS } from "@/constants.js";
+import {
+  NOTES_FLAT,
+  ENHARMONIC_EQUIVALENTS,
+  CHORD_FORMULAS,
+} from "@/constants.js";
 
 const compressor = new Tone.Compressor({
   threshold: -12, // Le seuil à partir duquel la compression s'active
@@ -50,7 +54,7 @@ export const piano = new Tone.Sampler({
 function noteToMidi(note) {
   const octave = parseInt(note.slice(-1));
   const noteName = note.slice(0, -1);
-  const noteIndex = ALL_NOTES_FLAT.indexOf(noteName);
+  const noteIndex = NOTES_FLAT.indexOf(noteName);
   return octave * 12 + noteIndex;
 }
 
@@ -62,7 +66,14 @@ function noteToMidi(note) {
 export function getNotesForChord(chord, previousNotes = null) {
   const intervals = CHORD_FORMULAS[chord.quality];
   if (!intervals) return [];
-  const rootIndex = ALL_NOTES_FLAT.indexOf(chord.root);
+  let rootIndex = NOTES_FLAT.indexOf(chord.root);
+
+  // Si non trouvé, essayer la forme enharmonique
+  if (rootIndex === -1 && ENHARMONIC_EQUIVALENTS[chord.root]) {
+    const enharmonic = ENHARMONIC_EQUIVALENTS[chord.root];
+    rootIndex = NOTES_FLAT.indexOf(enharmonic);
+  }
+
   if (rootIndex === -1) return [];
 
   let baseOctave;
@@ -88,7 +99,7 @@ export function getNotesForChord(chord, previousNotes = null) {
   let notes = intervals.map((interval) => {
     const noteIndex = (rootIndex + interval) % 12;
     const octave = baseOctave + Math.floor((rootIndex + interval) / 12);
-    return { name: ALL_NOTES_FLAT[noteIndex], octave: octave };
+    return { name: NOTES_FLAT[noteIndex], octave: octave };
   });
 
   const inversion = chord.inversion || 0;

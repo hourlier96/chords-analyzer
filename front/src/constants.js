@@ -12,7 +12,7 @@ export const NOTES = [
   "A# / Bb",
   "B",
 ];
-export const ALL_NOTES_FLAT = [
+export const NOTES_FLAT = [
   "C",
   "C#",
   "D",
@@ -26,6 +26,18 @@ export const ALL_NOTES_FLAT = [
   "A#",
   "B",
 ];
+export const ENHARMONIC_EQUIVALENTS = {
+  "C#": "Db",
+  "D#": "Eb",
+  "F#": "Gb",
+  "G#": "Ab",
+  "A#": "Bb",
+  Db: "C#",
+  Eb: "D#",
+  Gb: "F#",
+  Ab: "G#",
+  Bb: "A#",
+};
 export const QUALITIES = [
   {
     label: "Majeurs",

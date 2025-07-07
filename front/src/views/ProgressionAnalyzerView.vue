@@ -185,14 +185,38 @@ const analysisStore = useAnalysisStore();
 const isSettingsOpen = ref(false);
 
 const defaultProgression = [
-  { id: 1, root: "C", quality: "", inversion: 0 },
-  { id: 2, root: "D", quality: "m7", inversion: 0 },
-  { id: 3, root: "G", quality: "7", inversion: 0 },
-  { id: 4, root: "F", quality: "maj7", inversion: 0 },
-  { id: 5, root: "A", quality: "m7", inversion: 0 },
-  { id: 6, root: "D", quality: "7", inversion: 0 },
-  { id: 7, root: "D", quality: "7", inversion: 1 },
-  { id: 8, root: "G", quality: "", inversion: 1 },
+  [
+    {
+      id: 1,
+      root: "D",
+      quality: "7",
+      inversion: 2,
+    },
+    {
+      id: 2,
+      root: "Bb",
+      quality: "maj7",
+      inversion: 0,
+    },
+    {
+      id: 3,
+      root: "C",
+      quality: "7",
+      inversion: 3,
+    },
+    {
+      id: 4,
+      root: "G",
+      quality: "7b9",
+      inversion: 0,
+    },
+    {
+      id: 5,
+      root: "F",
+      quality: "maj9",
+      inversion: 0,
+    },
+  ],
 ];
 
 const progression = ref(
