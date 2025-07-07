@@ -212,38 +212,36 @@ const settingsStore = useSettingsStore();
 const isSettingsOpen = ref(false);
 
 const defaultProgression = [
-  [
-    {
-      id: 1,
-      root: "D",
-      quality: "7",
-      inversion: 2,
-    },
-    {
-      id: 2,
-      root: "Bb",
-      quality: "maj7",
-      inversion: 0,
-    },
-    {
-      id: 3,
-      root: "C",
-      quality: "7",
-      inversion: 3,
-    },
-    {
-      id: 4,
-      root: "G",
-      quality: "7b9",
-      inversion: 0,
-    },
-    {
-      id: 5,
-      root: "F",
-      quality: "maj9",
-      inversion: 0,
-    },
-  ],
+  {
+    id: 1,
+    root: "D",
+    quality: "7",
+    inversion: 2,
+  },
+  {
+    id: 2,
+    root: "Bb",
+    quality: "maj7",
+    inversion: 0,
+  },
+  {
+    id: 3,
+    root: "C",
+    quality: "7",
+    inversion: 3,
+  },
+  {
+    id: 4,
+    root: "G",
+    quality: "7b9",
+    inversion: 0,
+  },
+  {
+    id: 5,
+    root: "F",
+    quality: "maj9",
+    inversion: 0,
+  },
 ];
 
 const progression = ref(
@@ -265,7 +263,7 @@ const modeOptions = computed(() => {
   }
   return Object.entries(analysisResults.value.major_modes_substitutions).map(
     ([modeName, modeData]) => ({
-      title: `${modeName}: ${modeData.borrowed_scale}`,
+      title: `${analysisResults.value.tonic} ${modeName}: ${modeData.borrowed_scale} scale`,
       value: modeName,
     })
   );
