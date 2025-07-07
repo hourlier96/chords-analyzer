@@ -81,7 +81,18 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
     chord_index, found_quality = parsed_chord
     interval = (chord_index - tonic_index + 12) % 12
 
-    base_numeral = CHROMATIC_DEGREES_MAP.get(interval)
+    mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
+    base_numeral = None
+
+    # D'abord, on vérifie si la FONDAMENTALE est diatonique au mode
+    if interval in mode_intervals:
+        # Si oui, on utilise le chiffrage diatonique (I, II, III...)
+        degree_index = mode_intervals.index(interval)
+        base_numeral = ROMAN_DEGREES[degree_index]
+    else:
+        # Sinon (fondamentale chromatique), on utilise le mapping chromatique (bII, #IV...)
+        base_numeral = CHROMATIC_DEGREES_MAP.get(interval)
+
     if not base_numeral:
         return {"chord": chord_name, "error": "Invalid Interval"}
 
@@ -95,56 +106,40 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
     expected_quality = None
     expected_numeral = None
     expected_chord_name = None
-    expect_from_other_mode = None
 
-    mode_intervals, mode_qualities, _ = MODES_DATA[mode_name]
-
-    # Cas 1: L'accord est diatonique. L'attente est l'accord lui-même.
-    if is_diatonic_flag:
+    # Cas 1: La fondamentale de l'accord est diatonique
+    if interval in mode_intervals:
         degree_index = mode_intervals.index(interval)
         expected_quality = mode_qualities[degree_index]
         diatonic_base_numeral = ROMAN_DEGREES[degree_index]
         expected_numeral = _format_numeral(diatonic_base_numeral, expected_quality)
 
-    # Cas 2: L'accord n'est pas diatonique.
+        # Gestion spécifique de la sensible en mode mineur (V7)
+        if (
+            mode_name == "Aeolian"
+            and base_numeral == "V"
+            and found_quality in ["7", "M"]
+        ):
+            # On s'attend à un accord majeur/7 venant de l'harmonique/mélodique ou de l'emprunt au parallèle majeur
+            expected_quality = "7" if found_quality == "7" else "M"
+            expected_numeral = _format_numeral(base_numeral, expected_quality)
+
+    # Cas 2: La fondamentale est chromatique (emprunt)
     else:
-        # Sous-cas 2a: La fondamentale est diatonique, mais la qualité est altérée.
-        if interval in mode_intervals:
-            # L'attente par défaut est l'accord diatonique du mode ACTUEL.
-            degree_index = mode_intervals.index(interval)
-            expected_quality = mode_qualities[degree_index]
-            diatonic_base_numeral = ROMAN_DEGREES[degree_index]
-            expected_numeral = _format_numeral(diatonic_base_numeral, expected_quality)
-
-            if mode_name == "Aeolian" and base_numeral == "V" and found_quality == "7":
-                parallel_mode_name = PARALLEL_MODES.get(mode_name)  # 'ionian'
-                if parallel_mode_name:
-                    p_intervals, p_qualities, _ = MODES_DATA[parallel_mode_name]
-                    if interval in p_intervals:
-                        p_degree_index = p_intervals.index(interval)
-                        # On prend la qualité attendue ('7') du mode majeur parallèle.
-                        expected_quality = p_qualities[p_degree_index]
-                        expected_numeral = _format_numeral(
-                            base_numeral, expected_quality
-                        )
-            # *** FIN DE LA CORRECTION DU BUG ***
-
-        # Sous-cas 2b: La fondamentale est chromatique. L'attente vient du mode parallèle.
-        else:
-            parallel_mode_name = PARALLEL_MODES.get(mode_name)
-            if parallel_mode_name:
-                p_intervals, p_qualities, _ = MODES_DATA[parallel_mode_name]
+        for mode, data in MODES_DATA.items():
+            if mode:
+                p_intervals, p_qualities = data[0], data[1]
                 if interval in p_intervals:
                     degree_index = p_intervals.index(interval)
                     expected_quality = p_qualities[degree_index]
                     expected_numeral = _format_numeral(base_numeral, expected_quality)
-                    expect_from_other_mode = parallel_mode_name
 
-    # Calcul du nom de l'accord attendu si une qualité a été trouvée
+    # Calcul du nom de l'accord attendu
     if expected_quality is not None:
         expected_root_index = (tonic_index + interval) % 12
         expected_root_name = get_note_from_index(expected_root_index)
 
+        # Gestion enharmonique simple
         if "b" in base_numeral and "#" in expected_root_name:
             flat_note_index = (expected_root_index + 1) % 12
             expected_root_name = get_note_from_index(flat_note_index) + "b"
@@ -158,6 +153,5 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
         "found_quality": found_quality,
         "expected_quality": expected_quality,
         "expected_chord_name": expected_chord_name,
-        "expect_from_other_mode": expect_from_other_mode,
         "is_diatonic": is_diatonic_flag,
     }

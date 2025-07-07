@@ -30,40 +30,6 @@
             </v-tooltip>
           </div>
         </div>
-
-        <v-tooltip
-          v-if="shouldShowExpected"
-          location="top"
-          text="Swap vers l'accord diatonique"
-        >
-          <template #activator="{ props: tooltipProps }">
-            <button
-              v-bind="tooltipProps"
-              class="flip-button"
-              @click="toggleCardFlip"
-            >
-              &#x21BA;
-            </button>
-          </template>
-        </v-tooltip>
-      </div>
-
-      <div class="analysis-card card-back">
-        <div class="card-content">
-          <div class="expected-chord-name">{{ item.expected_chord_name }}</div>
-          <div class="expected-numeral">{{ item.expected_numeral }}</div>
-        </div>
-        <v-tooltip location="top" text="Swap vers l'accord d'origine">
-          <template #activator="{ props: tooltipProps }">
-            <button
-              v-bind="tooltipProps"
-              class="flip-button"
-              @click="toggleCardFlip"
-            >
-              &#x21BA;
-            </button>
-          </template>
-        </v-tooltip>
       </div>
     </div>
   </div>
@@ -101,19 +67,6 @@ const props = defineProps({
 
 const isFlipped = ref(false);
 
-const toggleCardFlip = () => {
-  isFlipped.value = !isFlipped.value;
-};
-
-const shouldShowExpected = computed(() => {
-  return (
-    !props.item.is_diatonic &&
-    !!props.item.expected_chord_name &&
-    props.item.expected_chord_name !== props.item.chord &&
-    !props.item.expect_from_other_mode
-  );
-});
-
 const borrowedInfo = computed(() => {
   return props.analysis.result.borrowed_chords?.[props.item.chord];
 });
@@ -135,23 +88,13 @@ function getChordClass(item) {
   const hasFoundNumeral = item && typeof item.found_numeral === "string";
 
   return {
-    // Un accord étranger contient un bémol dans son chiffrage (ex: bIII, bVI)
-    foreign_chord:
-      !item.is_diatonic &&
-      hasFoundNumeral &&
-      (item.found_numeral.includes("b") || item.found_numeral.includes("#")),
-
     // Un accord d'emprunt est un accord non-diatonique pour lequel l'analyseur
     // a trouvé une correspondance attendue dans le mode parallèle.
-    borrowed_chord: !item.is_diatonic && !!item.expected_chord_name,
-
-    // Un accord de substitution est un accord non-diatonique qui n'est ni un emprunt
+    borrowed_chord: !item.is_diatonic && borrowedInfo,
     substitution_chord:
       !item.is_diatonic &&
       !item.expected_chord_name &&
-      (!hasFoundNumeral ||
-        (!item.found_numeral.includes("b") &&
-          !item.found_numeral.includes("#"))),
+      (!hasFoundNumeral || !item.found_numeral.includes("b")),
   };
 }
 </script>

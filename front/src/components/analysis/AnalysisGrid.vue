@@ -1,7 +1,18 @@
 <template>
   <div class="detailed-analysis-container">
     <div class="analysis-header">
-      <h3 class="analysis-grid-title">{{ title }}</h3>
+      <div v-if="!isSubstitution" class="mode-selector-wrapper">
+        <select v-model="selectedMode" class="mode-selector">
+          <option :value="null">Progression d'origine ({{ title }})</option>
+          <option v-for="mode in availableModes" :key="mode" :value="mode">
+            {{ rootNote }} {{ mode }}
+          </option>
+        </select>
+      </div>
+      <div v-else>
+        <h3 class="analysis-grid-title">{{ title }}</h3>
+      </div>
+
       <div v-if="!isSubstitution" class="legend">
         <div class="legend-item">
           <div class="legend-dot" style="background-color: #2ecc71"></div>
@@ -9,7 +20,6 @@
         </div>
         <div class="legend-item">
           <div class="legend-dot" style="background-color: #f1c40f"></div>
-          <div class="legend-dot" style="background-color: #e74c3c"></div>
           <span>Emprunts</span>
         </div>
       </div>
@@ -53,8 +63,8 @@
     </div>
     <div class="analysis-grid">
       <div
-        v-for="(item, index) in progressionItems"
-        :key="`${title}-${index}`"
+        v-for="(item, index) in displayedProgression"
+        :key="`${selectedMode || 'original'}-${index}`"
         class="chord-progression-group"
         :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
       >
@@ -73,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import * as Tone from "tone";
 import { mdiPlay, mdiStop } from "@mdi/js";
 
@@ -107,6 +117,49 @@ const props = defineProps({
   },
 });
 
+// État pour le mode sélectionné, initialisé avec le nom du mode de la prop 'title'
+const selectedMode = ref(props.title.split(" ")[1]);
+
+// Extrait la note racine (ex: "A#") du titre
+const rootNote = computed(() => props.title.split(" ")[0]);
+
+// Liste des modes disponibles pour le dropdown
+const availableModes = computed(() =>
+  Object.keys(props.analysis.result.harmonized_chords)
+);
+
+// Propriété calculée qui génère la progression à afficher
+const displayedProgression = computed(() => {
+  // Si aucun mode n'est sélectionné, retourne la progression d'origine
+  if (!selectedMode.value) {
+    return props.progressionItems;
+  }
+
+  const newModeChords =
+    props.analysis.result.harmonized_chords[selectedMode.value];
+  const originalModeName = props.title.split(" ")[1];
+  const originalModeChords =
+    props.analysis.result.harmonized_chords[originalModeName];
+
+  if (!newModeChords || !originalModeChords) {
+    return props.progressionItems;
+  }
+
+  return props.progressionItems.map((item, index) => {
+    const isOriginallyDiatonic = originalModeChords[index] !== null;
+    const newChord = newModeChords[index];
+
+    if (isOriginallyDiatonic && newChord) {
+      return {
+        ...item,
+        chord: newChord,
+      };
+    } else {
+      return item;
+    }
+  });
+});
+
 const showSecondaryDominants = ref(false);
 const isPlaying = ref(false);
 const currentlyPlayingIndex = ref(null);
@@ -121,7 +174,7 @@ const playEntireProgression = async () => {
   isPlaying.value = true;
 
   try {
-    for (const [index, item] of props.progressionItems.entries()) {
+    for (const [index, item] of displayedProgression.value.entries()) {
       if (!isPlaying.value) break;
       if (!item.chord) continue;
 
@@ -186,12 +239,34 @@ function stopSound() {
   padding: 0 0.5rem;
   border-bottom: 1px solid #4f4f4f;
   padding-bottom: 0.8rem;
+  gap: 1rem;
 }
 
-.analysis-grid-title {
-  margin: 0;
+.mode-selector-wrapper {
+  flex-grow: 1;
+  min-width: 180px;
+}
+
+.mode-selector {
+  background-color: #4a4a4a;
+  color: #edf2f4;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.5rem 0.8rem;
   font-size: 1.1rem;
   font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+
+.mode-selector:hover {
+  border-color: #777;
+}
+
+.mode-selector:focus {
+  outline: none;
+  border-color: #6497cc;
 }
 
 .header-controls {
@@ -205,6 +280,7 @@ function stopSound() {
   gap: 1rem;
   font-size: 13px;
   color: #bdc3c7;
+  flex-shrink: 0;
 }
 
 .legend-item {
