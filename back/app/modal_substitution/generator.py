@@ -76,6 +76,10 @@ def get_substitutions(
             continue
         roman_numeral = ROMAN_DEGREES[degree_index - 1]
         quality = mode_qualities[degree_index - 1]
+        if (
+            quality.startswith("m") and not quality.startswith("maj")
+        ) or "dim" in quality:
+            roman_numeral = roman_numeral.lower()
         borrowed_chords.append(
             {
                 "chord": get_diatonic_7th_chord(

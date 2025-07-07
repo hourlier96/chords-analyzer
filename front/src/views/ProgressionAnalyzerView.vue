@@ -87,54 +87,6 @@
                 >
               </v-tooltip>
             </h2>
-
-            <div class="global-controls">
-              <div class="mode-button-wrapper">
-                <v-tooltip location="top" text="Substitutions modales">
-                  <template #activator="{ props: tooltipProps }">
-                    <v-menu location="bottom">
-                      <template #activator="{ props: menuProps }">
-                        <button
-                          v-bind="{ ...tooltipProps, ...menuProps }"
-                          class="control-icon-button"
-                          :class="{ 'is-active': activeMode }"
-                        >
-                          <v-icon :icon="mdiSync" />
-                        </button>
-                      </template>
-                      <v-list density="compact" class="modal-list">
-                        <v-list-item
-                          v-for="option in modeOptions"
-                          :key="option.value"
-                          @click="activeMode = option.value"
-                          :class="{ 'is-active': activeMode === option.value }"
-                        >
-                          <v-list-item-title>{{
-                            option.title
-                          }}</v-list-item-title>
-                        </v-list-item>
-                      </v-list>
-                    </v-menu>
-                  </template>
-                </v-tooltip>
-
-                <v-tooltip
-                  v-if="activeMode"
-                  location="top"
-                  text="Réinitialiser"
-                >
-                  <template #activator="{ props }">
-                    <button
-                      v-bind="props"
-                      @click="resetActiveMode()"
-                      class="reset-mode-button"
-                    >
-                      <v-icon :icon="mdiClose" size="x-small"></v-icon>
-                    </button>
-                  </template>
-                </v-tooltip>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -148,15 +100,61 @@
             :secondary-dominants-map="secondaryDominantsMap"
           />
 
-          <AnalysisGrid
-            v-if="activeMode && substitutedModalProgression.length > 0"
-            :title="activeModeTitle"
-            :progression-items="substitutedModalProgression"
-            :analysis="analysisStore.lastAnalysis"
-            :piano="piano"
-            :secondary-dominants-map="secondaryDominantsMap"
-            :is-substitution="true"
-          />
+          <div class="action-button-container">
+            <div class="mode-button-wrapper">
+              <v-tooltip location="top" text="Substitutions modales">
+                <template #activator="{ props: tooltipProps }">
+                  <v-menu location="bottom">
+                    <template #activator="{ props: menuProps }">
+                      <button
+                        v-bind="{ ...tooltipProps, ...menuProps }"
+                        class="control-icon-button"
+                        :class="{ 'is-active': activeMode }"
+                      >
+                        <v-icon :icon="mdiSync" />
+                      </button>
+                    </template>
+                    <v-list density="compact" class="modal-list">
+                      <v-list-item
+                        v-for="option in modeOptions"
+                        :key="option.value"
+                        @click="activeMode = option.value"
+                        :class="{ 'is-active': activeMode === option.value }"
+                      >
+                        <v-list-item-title>{{
+                          option.title
+                        }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </template>
+              </v-tooltip>
+
+              <v-tooltip v-if="activeMode" location="top" text="Réinitialiser">
+                <template #activator="{ props }">
+                  <button
+                    v-bind="props"
+                    @click="resetActiveMode()"
+                    class="reset-mode-button"
+                  >
+                    <v-icon :icon="mdiClose" size="x-small"></v-icon>
+                  </button>
+                </template>
+              </v-tooltip>
+            </div>
+          </div>
+
+          <Transition name="grid-appear">
+            <AnalysisGrid
+              v-if="activeMode && substitutedModalProgression.length > 0"
+              :title="activeModeTitle"
+              :progression-items="substitutedModalProgression"
+              :analysis="analysisStore.lastAnalysis"
+              :piano="piano"
+              :secondary-dominants-map="secondaryDominantsMap"
+              :is-substitution="true"
+            />
+          </Transition>
         </div>
       </div>
     </div>
@@ -263,7 +261,7 @@ const substitutedModalProgression = computed(() => {
   return modeData.substitution.map((item) => {
     return {
       chord: item.chord,
-      found_numeral: item.roman,
+      found_numeral: `${item.roman}${item.quality}`,
       found_quality: item.quality,
       is_diatonic: false,
       expected_chord_name: null,
@@ -390,15 +388,24 @@ header {
   padding: 1rem;
 }
 
+/* Styles pour le conteneur des grilles et du bouton central */
 .analysis-grids-container {
+  align-items: center; /* Aligne verticalement les grilles et le bouton */
   display: flex;
   flex-direction: row;
   gap: 1.5rem;
 }
 
+/* Fait en sorte que les grilles prennent l'espace disponible */
 .analysis-grids-container > * {
   flex: 1;
   min-width: 0;
+}
+
+/* Conteneur spécifique pour le bouton pour éviter qu'il ne s'étire */
+.action-button-container {
+  flex-grow: 0; /* Empêche le conteneur de grandir */
+  flex-shrink: 0;
 }
 
 .settings-container {
@@ -417,9 +424,9 @@ header {
    ========================================================================== */
 .result-title {
   color: #a0cfff;
-  margin-top: 0;
-  font-weight: bold;
   font-size: 40px;
+  font-weight: bold;
+  margin-top: 0;
   text-align: center;
 }
 
@@ -483,7 +490,7 @@ header {
 /* ==========================================================================
    Modificateurs et États
    ========================================================================== */
-.global-controls .control-icon-button:hover,
+.control-icon-button:hover,
 .reset-mode-button:hover {
   background-color: #5a5a5a;
   border-color: #777;
@@ -493,7 +500,7 @@ header {
   background-color: #e57373;
 }
 
-.global-controls .control-icon-button.is-active {
+.control-icon-button.is-active {
   background-color: #fdcb6e;
   color: #000;
 }
@@ -504,5 +511,28 @@ header {
 
 .modal-list .is-active {
   background-color: #6497cc;
+}
+
+/* ==========================================================================
+   Transitions Vue.js
+   ========================================================================== */
+.grid-appear-enter-active {
+  transition: all 1s ease-in-out;
+}
+
+.grid-appear-leave-active {
+  transition: all 0.5s ease-in-out;
+}
+
+.grid-appear-enter-from,
+.grid-appear-leave-to {
+  opacity: 0;
+  transform: scale(0.98) translateY(10px);
+}
+
+.grid-appear-enter-to,
+.grid-appear-leave-from {
+  opacity: 1;
+  transform: scale(1) translateY(0);
 }
 </style>

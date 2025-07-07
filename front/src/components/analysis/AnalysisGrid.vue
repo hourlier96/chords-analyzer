@@ -148,7 +148,6 @@ const displayedProgression = computed(() => {
   return props.progressionItems.map((item, index) => {
     const isOriginallyDiatonic = originalModeChords[index] !== null;
     const newChord = newModeChords[index];
-
     if (isOriginallyDiatonic && newChord) {
       return {
         ...item,
