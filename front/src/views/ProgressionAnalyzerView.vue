@@ -261,7 +261,7 @@ const substitutedModalProgression = computed(() => {
   return modeData.substitution.map((item) => {
     return {
       chord: item.chord,
-      found_numeral: `${item.roman}${item.quality}`,
+      found_numeral: item.roman ? `${item.roman}${item.quality}` : null,
       found_quality: item.quality,
       is_diatonic: false,
       expected_chord_name: null,

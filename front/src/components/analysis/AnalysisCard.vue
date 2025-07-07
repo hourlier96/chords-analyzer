@@ -1,6 +1,10 @@
 <template>
   <div class="analysis-card-container">
-    <PlayButton :chord="extractChordComponents(item)" :piano="piano" />
+    <PlayButton
+      v-if="item.chord !== 'N/A'"
+      :chord="extractChordComponents(item)"
+      :piano="piano"
+    />
     <div
       v-if="showSecondaryDominant && secondaryDominantChord != 'N/A'"
       class="docked-secondary-dominant"
@@ -13,7 +17,7 @@
           <div class="chord-name">{{ item.chord }}</div>
           <div class="found-numeral" :class="getChordClass(item)">
             {{ item.found_numeral ? item.found_numeral : "" }}
-            <v-tooltip v-if="borrowedInfo" location="right">
+            <v-tooltip v-if="borrowedInfo && !isSubstitution" location="right">
               <template #activator="{ props: tooltipProps }">
                 <v-icon
                   v-bind="tooltipProps"
@@ -62,6 +66,10 @@ const props = defineProps({
   secondaryDominantChord: {
     type: String,
     default: null,
+  },
+  isSubstitution: {
+    type: Boolean,
+    default: false,
   },
 });
 
