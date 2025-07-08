@@ -11,6 +11,7 @@ export const useAnalysisStore = defineStore(
     const lastAnalysis = ref({
       result: null, // Les données de l'API
       progression: null, // L'instantané de la progression
+      model: null, // Le modèle IA utilisé pour l'analyse
     });
 
     // --- GETTERS (Propriétés calculées du store) ---
@@ -34,6 +35,10 @@ export const useAnalysisStore = defineStore(
       lastAnalysis.value.result.quality_analysis = enrichedResult;
     }
 
+    function setModel(newModel) {
+      lastAnalysis.value.model = newModel;
+    }
+
     function clearResult() {
       lastAnalysis.value.result = null;
       lastAnalysis.value.progression = null;
@@ -45,6 +50,7 @@ export const useAnalysisStore = defineStore(
       hasResult,
       setLastAnalysis,
       clearResult,
+      setModel,
     };
   },
   {

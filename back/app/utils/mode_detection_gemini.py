@@ -4,7 +4,7 @@ import google.generativeai as genai
 from constants import MODES_DATA
 
 
-def detect_tonic_and_mode(progression: list[str]) -> tuple[str, str, str]:
+def detect_tonic_and_mode(progression: list[str], model) -> tuple[str, str, str]:
     """
     Détermine la tonique, le mode et les explications d'une progression
     en utilisant l'API Google Gemini pour une analyse plus fiable et performante.
@@ -18,7 +18,7 @@ def detect_tonic_and_mode(progression: list[str]) -> tuple[str, str, str]:
         )
 
     # --- Initialisation du modèle ---
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    model = genai.GenerativeModel(model)
 
     # --- Création du prompt ---
     # Le prompt est modifié pour demander des explications détaillées avant la tonique et le mode.

@@ -27,6 +27,7 @@ load_dotenv()
 
 class ProgressionRequest(BaseModel):
     chords: List[str]
+    model: str
 
 
 app = FastAPI()
@@ -43,14 +44,15 @@ app.add_middleware(
 @app.post("/analyze")
 def get_all_substitutions(request: ProgressionRequest):
     progression = request.chords
+    model = request.model
     if not progression:
         return {"error": "Progression cannot be empty"}
 
     try:
         # Find tonic with IA
-        tonic, mode, explanations = detect_tonic_and_mode(progression)
-        # tonic = "F"
-        # mode = "Lydien"
+        tonic, mode, explanations = detect_tonic_and_mode(progression, model)
+        # tonic = "B"
+        # mode = "Harmonic Minor"
         # explanations = "balbla"
         detected_tonic_index = get_note_index(tonic)
 

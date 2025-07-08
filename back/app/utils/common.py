@@ -143,50 +143,38 @@ def _get_core_quality(quality):
 def get_scale_notes(key_tonic_str: str, mode_name: str) -> list[str]:
     """
     Génère la liste des notes d'une gamme à partir d'une tonique et d'un mode.
-
-    Utilise la base de données MODES_DATA pour construire la gamme.
-
-    Args:
-        key_tonic_str (str): La note tonique de la gamme (ex: "C", "F#", "Bb").
-        mode_name (str): Le nom du mode. Doit être une clé de MODES_DATA.
-                         La recherche est insensible à la casse.
-
-    Returns:
-        list[str]: Une liste de 7 notes (chaînes de caractères) constituant la gamme.
-
-    Raises:
-        ValueError: Si la tonique ou le mode est invalide.
     """
     # 1. Valider et normaliser la tonique
-    tonic_normalized = (
-        key_tonic_str.upper().replace("B", "#")
-        if "b" in key_tonic_str.lower()
-        else key_tonic_str.upper()
-    )
+    root_note = key_tonic_str[0].upper()
+    accidental = key_tonic_str[1:]
+
+    # Gère les bémols en cherchant l'équivalent diésé (ex: Bb -> A#)
+    # Ne touche pas à la note "B" seule.
+    if accidental == "b":
+        # On calcule l'index de la note bémolisée et on prend la note diésée correspondante
+        flat_index = (NOTE_INDEX_MAP[root_note] - 1 + 12) % 12
+        tonic_normalized = NOTES[flat_index]
+    else:
+        # Pour les notes naturelles ou diésées
+        tonic_normalized = key_tonic_str
+
     if tonic_normalized not in NOTE_INDEX_MAP:
-        raise ValueError(f"Tonic '{key_tonic_str}' is not a valid note name.")
+        raise ValueError(
+            f"Tonic '{key_tonic_str}' could not be normalized or is invalid."
+        )
 
     tonic_index = NOTE_INDEX_MAP[tonic_normalized]
 
-    # 2. Valider le mode (recherche insensible à la casse)
-    found_mode_key = None
-    for key in MODES_DATA:
-        if key.lower() == mode_name.lower():
-            found_mode_key = key
-            break
-
+    # 2. Valider le mode
+    found_mode_key = next(
+        (key for key in MODES_DATA if key.lower() == mode_name.lower()), None
+    )
     if not found_mode_key:
-        raise ValueError(
-            f"Mode '{mode_name}' not found. Check spelling and available modes."
-        )
+        raise ValueError(f"Mode '{mode_name}' not found.")
 
     # 3. Récupérer les intervalles et construire la gamme
     intervals = MODES_DATA[found_mode_key][0]
-
-    scale_notes = []
-    for interval in intervals:
-        note_index = (tonic_index + interval) % 12
-        scale_notes.append(NOTES[note_index])
+    scale_notes = [(NOTES[(tonic_index + i) % 12]) for i in intervals]
 
     return scale_notes
 

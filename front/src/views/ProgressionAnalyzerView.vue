@@ -87,6 +87,7 @@
       v-model="progression"
       :is-loading="isLoading"
       :error="analysisError"
+      v-model:ai-model="selectedAiModel"
       @analyze="analyzeProgression()"
     />
 
@@ -254,6 +255,8 @@ const progression = ref(
 const isLoading = ref(false);
 const analysisError = ref(null);
 
+const selectedAiModel = ref("gemini-2.5-flash");
+
 const activeMode = ref(null);
 const analysisResults = computed(() => analysisStore.lastAnalysis.result);
 
@@ -338,7 +341,8 @@ async function analyzeProgression() {
     const response = await fetch("http://localhost:8000/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chords }),
+      // MODIFIÉ: Utilise la variable d'état pour le modèle
+      body: JSON.stringify({ chords, model: selectedAiModel.value }),
     });
     if (!response.ok)
       throw new Error(`Erreur du serveur: ${response.statusText}`);
@@ -347,6 +351,7 @@ async function analyzeProgression() {
 
     const progressionSnapshot = JSON.parse(JSON.stringify(progression.value));
     analysisStore.setLastAnalysis(data, progressionSnapshot);
+    analysisStore.setModel(selectedAiModel.value);
   } catch (e) {
     analysisError.value = `Une erreur est survenue : ${e.message}`;
     analysisStore.clearResult();

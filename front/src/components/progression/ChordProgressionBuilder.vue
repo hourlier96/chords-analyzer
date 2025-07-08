@@ -106,7 +106,36 @@
       </div>
     </div>
 
-    <div class="analyze-button-container">
+    <div class="analyze-section-container">
+      <div class="model-selector">
+        <label
+          :class="{ active: aiModel === 'gemini-2.5-flash' }"
+          class="radio-label"
+        >
+          <input
+            type="radio"
+            name="ai-model"
+            value="gemini-2.5-flash"
+            :checked="aiModel === 'gemini-2.5-flash'"
+            @change="$emit('update:aiModel', 'gemini-2.5-flash')"
+          />
+          Modèle Rapide
+        </label>
+        <label
+          :class="{ active: aiModel === 'gemini-2.5-pro' }"
+          class="radio-label"
+        >
+          <input
+            type="radio"
+            name="ai-model"
+            value="gemini-2.5-pro"
+            :checked="aiModel === 'gemini-2.5-pro'"
+            @change="$emit('update:aiModel', 'gemini-2.5-pro')"
+          />
+          Modèle Précis
+        </label>
+      </div>
+
       <button
         class="analyze-button"
         @click="onAnalyze"
@@ -133,7 +162,7 @@
 </template>
 
 <script setup>
-// Le script reste exactement le même
+// Le script a de nouvelles props et emits
 import { ref, computed } from "vue";
 import draggable from "vuedraggable";
 import * as Tone from "tone";
@@ -151,9 +180,10 @@ const props = defineProps({
   modelValue: { type: Array, required: true },
   isLoading: { type: Boolean, default: false },
   error: { type: String, default: "" },
+  aiModel: { type: String, required: true },
 });
 
-const emit = defineEmits(["update:modelValue", "analyze"]);
+const emit = defineEmits(["update:modelValue", "analyze", "update:aiModel"]);
 
 const editingChordId = ref(null);
 const selectedChordNotes = ref([]);
@@ -174,7 +204,8 @@ const isProgressionUnchanged = computed(() => {
     return false;
   return (
     JSON.stringify(progression.value) ===
-    JSON.stringify(analysisStore.lastAnalysis.progression)
+      JSON.stringify(analysisStore.lastAnalysis.progression) &&
+    props.aiModel === analysisStore.lastAnalysis.model
   );
 });
 
@@ -290,26 +321,23 @@ function stopSound() {
   margin-bottom: 2rem;
 }
 
-/* MODIFIÉ : Le conteneur principal devient une colonne flex */
 .progression-builder {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; /* Espace entre le piano et la rangée principale */
+  gap: 1.5rem;
 }
 
-/* NOUVEAU : La rangée principale qui aligne les contrôles et les accords */
 .main-row {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-/* MODIFIÉ : Le conteneur des boutons est maintenant un élément flex */
 .header-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-shrink: 0; /* Empêche les boutons de se compresser */
+  flex-shrink: 0;
 }
 
 .header-controls .control-icon-button {
@@ -329,13 +357,12 @@ function stopSound() {
   border-color: #777;
 }
 
-/* MODIFIÉ : La zone des accords peut maintenant s'étendre */
 .draggable-container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
-  flex-grow: 1; /* Permet à la zone des accords de prendre l'espace restant */
+  flex-grow: 1;
 }
 .is-playing-halo {
   box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
@@ -401,10 +428,48 @@ function stopSound() {
 .quick-import-button.cancel {
   background-color: #f44336;
 }
-.analyze-button-container {
+/* MODIFIÉ: Renommé et stylisé pour inclure le sélecteur */
+.analyze-section-container {
   margin-top: 2rem;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
+
+/* NOUVEAU: Styles pour le sélecteur de modèle */
+.model-selector {
+  display: flex;
+  background-color: #252525;
+  border-radius: 8px;
+  padding: 5px;
+  border: 1px solid #444;
+}
+
+.radio-label {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #bbb;
+  background-color: transparent;
+  font-size: 0.9rem;
+}
+
+.radio-label.active {
+  background-color: #007bff;
+  color: white;
+  font-weight: 500;
+}
+
+.radio-label:not(.active):hover {
+  background-color: #3f3f3f;
+}
+
+.radio-label input[type="radio"] {
+  display: none; /* Cache les boutons radio natifs */
+}
+
 .analyze-button {
   padding: 1rem 2rem;
   font-size: 1.2rem;
@@ -417,6 +482,7 @@ function stopSound() {
   align-items: center;
   justify-content: center;
 }
+
 .analyze-button:disabled {
   background-color: #555;
   cursor: not-allowed;
