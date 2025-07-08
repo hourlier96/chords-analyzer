@@ -141,11 +141,6 @@ HARMONIC_MINOR_MODES = {
         ["m(maj7)", "m7b5", "maj7#5", "m7", "7", "maj7", "dim7"],
         None,
     ),
-    "Locrian ♮6": (
-        [0, 1, 3, 5, 6, 9, 10],
-        ["m7b5", "maj7#5", "m7", "7", "maj7", "dim7", "m(maj7)"],
-        None,
-    ),
     "Ionian #5": (
         [0, 2, 4, 5, 8, 9, 11],
         ["maj7#5", "m7", "7", "maj7", "dim7", "m(maj7)", "m7b5"],
@@ -164,6 +159,11 @@ HARMONIC_MINOR_MODES = {
     "Lydian #2": (
         [0, 3, 4, 6, 7, 9, 11],
         ["maj7", "dim7", "m(maj7)", "m7b5", "maj7#5", "m7", "7"],
+        None,
+    ),
+    "Locrian ♮6": (
+        [0, 1, 3, 5, 6, 9, 10],
+        ["m7b5", "maj7#5", "m7", "7", "maj7", "dim7", "m(maj7)"],
         None,
     ),
     "Super Locrian bb7": (
