@@ -58,8 +58,8 @@ def test_analyze_diatonic_half_diminished_chord():
 
 def test_analyze_secondary_dominant():
     """
-    CORRIGÉ: Teste un accord dont la fondamentale est diatonique mais la qualité est altérée (II majeur, ou V/V).
-    Avec la logique corrigée, la fonction doit s'attendre à l'accord diatonique du mode ACTUEL (ii7).
+    Teste un accord dont la fondamentale est diatonique mais la qualité est altérée
+    Avec la logique corrigée, la fonction doit s'attendre à l'accord diatonique du mode ACTUEL (ii7)
     """
     result = analyze_chord_in_context("D", 0, "Ionian")  # D majeur en Do majeur
     expected = {

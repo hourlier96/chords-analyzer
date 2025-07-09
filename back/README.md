@@ -30,3 +30,11 @@ uvicorn app.main:app --reload
 ```bash
 python3 -m pytest
 ```
+
+## CI
+
+Linting & Tests
+
+Test locally with act:
+
+act -j <job_name> --rm -W .github/workflows/ci.yaml

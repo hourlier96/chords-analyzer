@@ -26,6 +26,9 @@ def get_tritone_substitute(chord_name):
     # Trouver les guide tones pour l'explication
     original_third_index = (root_index + 4) % 12
     original_seventh_index = (root_index + 10) % 12
-    guide_tones = f"{get_note_from_index(original_third_index)} & {get_note_from_index(original_seventh_index)}"
+    guide_tones = (
+        f"{get_note_from_index(original_third_index)} & "
+        f"{get_note_from_index(original_seventh_index)}"
+    )
 
     return sub_chord_name, guide_tones

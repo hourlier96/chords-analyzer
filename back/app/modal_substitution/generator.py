@@ -44,7 +44,7 @@ def get_degrees_to_borrow(quality_analysis: List[QualityAnalysisItem]) -> List[O
 
 
 def get_substitutions(
-    quality_analysis: List[QualityAnalysisItem],
+    progression: List[str],
     relative_tonic_index: int,
     degrees_to_borrow: List[Optional[int]],
     mode_name: str = "Ionian",
@@ -94,10 +94,10 @@ def get_substitutions(
 
     new_progression_chords: List[dict] = []
     if not borrowed_chords:
-        return []
+        return [{"chord": chord, "roman": None, "quality": None} for chord in progression]
 
     borrowed_idx = 0
-    for _ in quality_analysis:
+    for _ in progression:
         new_progression_chords.append(borrowed_chords[borrowed_idx % len(borrowed_chords)])
         borrowed_idx += 1
 

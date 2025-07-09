@@ -62,7 +62,7 @@ def get_all_substitutions(request: ProgressionRequest):
         for mode_name, (_, _, interval) in MAJOR_MODES_DATA.items():
             relative_tonic_index = (detected_tonic_index + interval + 12) % 12
             new_progression = get_substitutions(
-                quality_analysis,
+                progression,
                 relative_tonic_index,
                 degrees_to_borrow,
             )
@@ -76,7 +76,7 @@ def get_all_substitutions(request: ProgressionRequest):
         for mode_name, (_, _, _) in MODES_DATA.items():
             tonic_index: int = get_note_index(tonic_name)
             new_progression = get_substitutions(
-                quality_analysis, tonic_index, degrees_to_borrow, mode_name
+                progression, tonic_index, degrees_to_borrow, mode_name
             )
             harmonized_chords[mode_name] = [
                 analyze_chord_in_context(item["chord"], tonic_index, mode_name)
