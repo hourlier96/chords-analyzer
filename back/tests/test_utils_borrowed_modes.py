@@ -1,4 +1,3 @@
-import pytest
 from app.utils.borrowed_modes import find_possible_modes_for_chord, get_borrowed_chords
 
 
@@ -68,9 +67,7 @@ def test_get_borrowed_one_chord_in_major_key():
         {"chord": "Fmaj", "is_diatonic": True},
     ]
     result = get_borrowed_chords(analysis, "C", "Ionian")
-    expected = {
-        "Bb": ["Dorian", "Mixolydian", "Aeolian", "Mixolydian b6", "Locrian ♮2"]
-    }
+    expected = {"Bb": ["Dorian", "Mixolydian", "Aeolian", "Mixolydian b6", "Locrian ♮2"]}
 
     if "Bb" in result:
         result["Bb"].sort()

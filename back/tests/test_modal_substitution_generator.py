@@ -1,4 +1,5 @@
 import pytest
+
 from app.modal_substitution.generator import get_degrees_to_borrow, get_substitutions
 
 
@@ -46,7 +47,7 @@ class TestGetSubstitutions:
         result = get_substitutions(base_prog, 0, degrees)  # Tonique = C
 
         expected = [
-            {"chord": "Dm7", "roman": "II", "quality": "m7"},
+            {"chord": "Dm7", "roman": "ii", "quality": "m7"},
             {"chord": "G7", "roman": "V", "quality": "7"},
             {"chord": "Cmaj7", "roman": "I", "quality": "maj7"},
         ]
@@ -77,7 +78,7 @@ class TestGetSubstitutions:
         result = get_substitutions(base_prog, 7, degrees)  # Tonique = G
 
         # Le VIème degré de Sol Majeur est Mi mineur 7 (Em7).
-        sub1 = {"chord": "Em7", "roman": "VI", "quality": "m7"}
+        sub1 = {"chord": "Em7", "roman": "vi", "quality": "m7"}
         # Le IVème degré de Sol Majeur est Do majeur 7 (Cmaj7).
         sub2 = {"chord": "Cmaj7", "roman": "IV", "quality": "maj7"}
 

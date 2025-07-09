@@ -1,3 +1,5 @@
+from typing import Dict, List, Optional, Tuple
+
 NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 NOTE_INDEX_MAP = {
     "C": 0,
@@ -95,7 +97,7 @@ CORE_QUALITIES = {
     "5": "power",
 }
 
-MODES_DATA = {}
+MODES_DATA: Dict[str, Tuple[List[int], List[str], Optional[int]]] = {}
 MAJOR_MODES_DATA = {
     "Ionian": (
         [0, 2, 4, 5, 7, 9, 11],

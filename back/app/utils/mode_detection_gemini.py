@@ -1,4 +1,5 @@
 import os
+
 import google.generativeai as genai
 
 from constants import MODES_DATA
@@ -23,16 +24,20 @@ def detect_tonic_and_mode(progression: list[str], model) -> tuple[str, str, str]
     # --- Création du prompt ---
     # Le prompt est modifié pour demander des explications détaillées avant la tonique et le mode.
     prompt = (
-        "# Rôle et Objectif"
-        "Identifie la tonalité (tonique et mode) la plus probable d'une progression d'accords donnée."
-        " "
-        "# Instructions et Contraintes Strictes"
-        "   **Explication :** Fournis une explication brève et technique (1 à 2 phrases maximum) justifiant ton choix. Mentionne les degrés clés (ex: I, V, IV) ou les mouvements cadentiels qui confirment la tonalité."
-        "   **Format de Sortie :** La dernière ligne de ta réponse doit **impérativement et uniquement** contenir la tonalité finale, formatée comme suit : `TONIQUE MODE`."
-        "   **Nomenclature de la Tonique :** La tonique doit toujours être représentée par sa notation lettrée (A, B, C, D, E, F, G), incluant les altérations si nécessaire (ex: Bb, F#)."
-        f"  **Modes Valides :** Le mode doit **obligatoirement** appartenir à la liste suivante (la casse est très importante): {MODES_DATA.keys()}."
-        " "
-        "---"
+        "# Rôle et Objectif "
+        "Identifie la tonalité (tonique et mode) la plus probable d'une progression d'accords "
+        "donnée. "
+        "# Instructions et Contraintes Strictes "
+        "**Explication :** Fournis une explication brève et technique (1 à 2 phrases maximum)"
+        "justifiant ton choix. Mentionne les degrés clés (ex: I, V) ou les mouvements cadentiels"
+        "qui confirment la tonalité. "
+        "**Format de Sortie :** La dernière ligne de ta réponse doit **impérativement** "
+        "contenir la tonalité finale, formatée comme suit : `TONIQUE MODE`. "
+        "**Nomenclature de la Tonique :** La tonique doit toujours être représentée par sa notation"
+        "lettrée (A, B, C, D, E, F, G), incluant les altérations si nécessaire (ex: Bb, F#). "
+        f"**Modes Valides :** Le mode doit **obligatoirement** appartenir à la liste suivante (la "
+        f"casse est très importante): {MODES_DATA.keys()}. "
+        "--- "
         f"Progression à analyser : {' - '.join(progression)}"
     )
 
@@ -61,7 +66,8 @@ def detect_tonic_and_mode(progression: list[str], model) -> tuple[str, str, str]
             return tonic, mode, explanation
         else:
             raise ValueError(
-                f"La dernière ligne de l'API est mal formatée pour la tonique et le mode : '{last_line}'"
+                "La dernière ligne de l'API est mal formatée"
+                f"pour la tonique et le mode : '{last_line}'"
             )
 
     except Exception as e:

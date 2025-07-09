@@ -1,13 +1,13 @@
 import pytest
 
 from app.utils.common import (
-    get_note_index,
-    get_note_from_index,
-    is_chord_diatonic,
-    parse_chord,
-    is_dominant_chord,
-    get_diatonic_7th_chord,
     _get_core_quality,
+    get_diatonic_7th_chord,
+    get_note_from_index,
+    get_note_index,
+    is_chord_diatonic,
+    is_dominant_chord,
+    parse_chord,
 )
 
 
@@ -35,7 +35,8 @@ def test_get_note_index_invalid():
 
 
 @pytest.mark.parametrize(
-    "index, expected_note", [(0, "C"), (8, "G#"), (11, "B"), (12, "C")]  # Modulo test
+    "index, expected_note",
+    [(0, "C"), (8, "G#"), (11, "B"), (12, "C")],  # Modulo test
 )
 def test_get_note_from_index(index, expected_note):
     assert get_note_from_index(index) == expected_note

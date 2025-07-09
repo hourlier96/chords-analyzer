@@ -1,16 +1,17 @@
-from constants import (
-    CORE_QUALITIES,
-    MODES_DATA,
-)
+from typing import List
+
+from app.utils.chords_analyzer import QualityAnalysisItem
 from app.utils.common import (
     get_chord_notes,
     get_scale_notes,
 )
+from constants import (
+    CORE_QUALITIES,
+    MODES_DATA,
+)
 
 
-def find_possible_modes_for_chord(
-    borrowed_chord_name: str, tonic_name: str
-) -> list[str]:
+def find_possible_modes_for_chord(borrowed_chord_name: str, tonic_name: str) -> list[str]:
     """
     Analyse un accord et retourne la liste des modes parallèles auxquels il
     appartient diatoniquement, en se basant sur les notes.
@@ -53,7 +54,7 @@ def find_possible_modes_for_chord(
 
 
 def get_borrowed_chords(
-    quality_analysis: list[dict], tonic_name: str, original_mode: str
+    quality_analysis: List[QualityAnalysisItem], tonic_name: str, original_mode: str
 ) -> dict:
     """
     Identifie les accords empruntés à partir d'une analyse de progression.
@@ -72,6 +73,9 @@ def get_borrowed_chords(
         # On ne traite que les accords non-diatoniques au mode d'origine.
         if not analysis_item.get("is_diatonic"):
             chord_name = analysis_item.get("chord")
+            if chord_name is None:
+                continue
+            chord_name = chord_name
             found_quality = analysis_item.get("found_quality")
             base_numeral = analysis_item.get("found_numeral")
 
@@ -89,9 +93,7 @@ def get_borrowed_chords(
 
             # Filtrer pour ne garder que les modes qui ne sont pas le mode original.
             if possible_modes:
-                modes_str_list = [
-                    mode for mode in possible_modes if mode != original_mode
-                ]
+                modes_str_list = [mode for mode in possible_modes if mode != original_mode]
                 if modes_str_list:
                     borrowed_chords[chord_name] = modes_str_list
 

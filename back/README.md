@@ -9,7 +9,13 @@ Tonic & mode detection are made by calling Gemini model
 Install requirements.txt dependencies first with:
 
 ```bash
-pip install -r requirements.txt
+uv venv
+source .venv/bin/activate
+uv pip compile pyproject.toml --extra dev -o requirements.txt
+uv pip install -r requirements.txt
+cd ../ && pre-commit install 
+
+# Then use VSCode launcher to run the app
 ```
 
 ## Run
@@ -17,4 +23,10 @@ pip install -r requirements.txt
 ```bash
 
 uvicorn app.main:app --reload
+```
+
+## Tests
+
+```bash
+python3 -m pytest
 ```

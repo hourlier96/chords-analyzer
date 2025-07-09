@@ -1,11 +1,14 @@
 import re
+from typing import List, Optional
+
+from app.utils.chords_analyzer import QualityAnalysisItem
 from app.utils.common import (
     get_diatonic_7th_chord,
 )
 from constants import MAJOR_MODES_DATA, ROMAN_DEGREES
 
 
-def get_degrees_to_borrow(quality_analysis: list[dict]) -> list[int | None]:
+def get_degrees_to_borrow(quality_analysis: List[QualityAnalysisItem]) -> List[Optional[int]]:
     """
     Prend le résultat de l'analyse détaillée et retourne une liste de degrés numériques (1-7)
     pour les accords qui sont des candidats à la substitution.
@@ -13,7 +16,7 @@ def get_degrees_to_borrow(quality_analysis: list[dict]) -> list[int | None]:
     Les accords de tonique (I) et les accords non-diatoniques ne sont pas substituables
     et seront représentés par `None`.
     """
-    degrees_to_borrow = []
+    degrees_to_borrow: List[Optional[int]] = []
 
     for analysis_item in quality_analysis:
         found_numeral = analysis_item.get("found_numeral", "")
@@ -41,32 +44,32 @@ def get_degrees_to_borrow(quality_analysis: list[dict]) -> list[int | None]:
 
 
 def get_substitutions(
-    base_progression,
-    relative_tonic_index,
-    degrees_to_borrow,
-    mode_name="Ionian",
-):
+    quality_analysis: List[QualityAnalysisItem],
+    relative_tonic_index: int,
+    degrees_to_borrow: List[Optional[int]],
+    mode_name: str = "Ionian",
+) -> List[dict]:
     """
-    Crée une liste d'accords de substitution à partir d'une liste de degrés,
-    en les enrichissant avec le chiffrage romain et la qualité de la gamme majeure relative du mode fournit.
+    Crée une liste d'accords de substitution à partir d'une liste de degrés, en les
+    enrichissant avec le chiffrage et la qualité de la gamme majeure relative du mode fournit.
 
     Pour mode_name="Phrygian" : La variable relative_tonic_index pointera correctement vers G#.
-    Construction de l'accord : get_diatonic_7th_chord sera appelé avec la tonique G# et le mode "Ionian".
     Il construira donc les accords de la gamme de G# Majeur.
 
     Args:
-        base_progression (list): La progression originale (utilisée pour la longueur).
+        quality_analysis (list): L'analyse détaillée de la progression d'accords.
         relative_tonic_index (int): L'index de la note tonique pour la substitution.
-        degrees_to_borrow (list): Une liste d'indices de degrés (0-6) à utiliser.
+        degrees_to_borrow (list): Une liste de degrés (1-7) ou `None`.
 
     Returns:
         list: Une liste de dictionnaires, chaque dictionnaire représentant un accord
               substitué avec son nom, son degré, son chiffrage romain et sa qualité.
     """
     mode_qualities = MAJOR_MODES_DATA["Ionian"][1]
-    borrowed_chords = []
+    borrowed_chords: List[dict] = []
+
     for degree_index in degrees_to_borrow:
-        if not degree_index:
+        if degree_index is None:
             borrowed_chords.append(
                 {
                     "chord": "N/A",
@@ -75,31 +78,27 @@ def get_substitutions(
                 }
             )
             continue
+
         roman_numeral = ROMAN_DEGREES[degree_index - 1]
         quality = mode_qualities[degree_index - 1]
-        if (
-            quality.startswith("m") and not quality.startswith("maj")
-        ) or "dim" in quality:
+        if (quality.startswith("m") and not quality.startswith("maj")) or "dim" in quality:
             roman_numeral = roman_numeral.lower()
+
         borrowed_chords.append(
             {
-                "chord": get_diatonic_7th_chord(
-                    degree_index, relative_tonic_index, mode_name
-                ),
+                "chord": get_diatonic_7th_chord(degree_index, relative_tonic_index, mode_name),
                 "roman": roman_numeral,
                 "quality": quality,
             }
         )
 
-    new_progression_chords = []
+    new_progression_chords: List[dict] = []
     if not borrowed_chords:
-        return base_progression
+        return []
 
     borrowed_idx = 0
-    for _ in base_progression:
-        new_progression_chords.append(
-            borrowed_chords[borrowed_idx % len(borrowed_chords)]
-        )
+    for _ in quality_analysis:
+        new_progression_chords.append(borrowed_chords[borrowed_idx % len(borrowed_chords)])
         borrowed_idx += 1
 
     return new_progression_chords

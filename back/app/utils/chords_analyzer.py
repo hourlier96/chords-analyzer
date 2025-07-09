@@ -1,3 +1,5 @@
+from typing import Optional, TypedDict
+
 from app.utils.common import (
     get_note_from_index,
     is_chord_diatonic,
@@ -31,7 +33,17 @@ PARALLEL_MODES = {
 }
 
 
-def analyze_chord_in_context(chord_name, tonic_index, mode_name):
+class QualityAnalysisItem(TypedDict):
+    chord: str
+    found_numeral: Optional[str]
+    expected_numeral: Optional[str]
+    found_quality: Optional[str]
+    expected_quality: Optional[str]
+    expected_chord_name: Optional[str]
+    is_diatonic: bool | None
+
+
+def analyze_chord_in_context(chord_name, tonic_index, mode_name) -> QualityAnalysisItem:
     """
     Analyse un accord dans un contexte tonal/modal, en gérant les accords
     diatoniques et les emprunts courants.
@@ -39,11 +51,7 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
 
     def _format_numeral(base_numeral, quality):
         core_quality = CORE_QUALITIES.get(quality, "major")
-        numeral = (
-            base_numeral.lower()
-            if core_quality in ["minor", "diminished"]
-            else base_numeral
-        )
+        numeral = base_numeral.lower() if core_quality in ["minor", "diminished"] else base_numeral
         suffix_map = {
             "maj7": "maj7",
             "maj7b5": "maj7b5",
@@ -77,7 +85,15 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
     # --- Analyse principale ---
     parsed_chord = parse_chord(chord_name)
     if not parsed_chord:
-        return {"chord": chord_name, "error": "Invalid Chord"}
+        return {
+            "chord": chord_name,
+            "found_numeral": None,
+            "expected_numeral": None,
+            "found_quality": None,
+            "expected_quality": None,
+            "expected_chord_name": None,
+            "is_diatonic": None,
+        }
 
     chord_index, found_quality = parsed_chord
     interval = (chord_index - tonic_index + 12) % 12
@@ -95,13 +111,19 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
         base_numeral = CHROMATIC_DEGREES_MAP.get(interval)
 
     if not base_numeral:
-        return {"chord": chord_name, "error": "Invalid Interval"}
+        return {
+            "chord": chord_name,
+            "found_numeral": None,
+            "expected_numeral": None,
+            "found_quality": None,
+            "expected_quality": None,
+            "expected_chord_name": None,
+            "is_diatonic": None,
+        }
 
     found_numeral = _format_numeral(base_numeral, found_quality)
 
-    is_diatonic_flag = is_chord_diatonic(
-        chord_name, get_note_from_index(tonic_index), mode_name
-    )
+    is_diatonic_flag = is_chord_diatonic(chord_name, get_note_from_index(tonic_index), mode_name)
 
     # --- Logique pour déterminer l'accord "attendu" ---
     expected_quality = None
@@ -116,12 +138,9 @@ def analyze_chord_in_context(chord_name, tonic_index, mode_name):
         expected_numeral = _format_numeral(diatonic_base_numeral, expected_quality)
 
         # Gestion spécifique de la sensible en mode mineur (V7)
-        if (
-            mode_name == "Aeolian"
-            and base_numeral == "V"
-            and found_quality in ["7", "M"]
-        ):
-            # On s'attend à un accord majeur/7 venant de l'harmonique/mélodique ou de l'emprunt au parallèle majeur
+        if mode_name == "Aeolian" and base_numeral == "V" and found_quality in ["7", "M"]:
+            # On s'attend à un accord majeur/7 venant de l'harmonique/mélodique
+            # ou de l'emprunt au parallèle majeur
             expected_quality = "7" if found_quality == "7" else "M"
             expected_numeral = _format_numeral(base_numeral, expected_quality)
 

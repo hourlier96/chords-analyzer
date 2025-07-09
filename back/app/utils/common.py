@@ -1,13 +1,17 @@
 from constants import (
+    CORE_QUALITIES,
     MODES_DATA,
     NOTE_INDEX_MAP,
     NOTES,
-    CORE_QUALITIES,
 )
 
 
 # Returns the chromatic index (0–11) for a given note string
-def get_note_index(note_str):
+def get_note_index(note_str: str) -> int:
+    """
+    Converts a note string (e.g., "C#", "Gb") into its chromatic index (0-11).
+    This function is guaranteed to return an integer or raise a ValueError.
+    """
     note_map = {
         "DB": "C#",
         "EB": "D#",
@@ -18,7 +22,6 @@ def get_note_index(note_str):
         "B#": "C",
     }
 
-    # Normalize the note by stripping extensions and accidentals
     clean_note = (
         note_str.upper()
         .replace("♭", "B")
@@ -30,18 +33,23 @@ def get_note_index(note_str):
         .split("ø")[0]
     )
 
-    # Special case for "Cb" (B double flat)
+    if not clean_note:
+        raise ValueError(f"Invalid note string: '{note_str}'")
+
     if clean_note == "CB":
         return 11
 
-    # Map enharmonic equivalents
     if clean_note in note_map:
         clean_note = note_map[clean_note]
 
-    # Return chromatic index
-    if len(clean_note) > 1 and clean_note[1] in ["#", "B"]:
-        return NOTES.index(clean_note[:2])
-    return NOTES.index(clean_note[0])
+    note_to_find = (
+        clean_note[:2] if len(clean_note) > 1 and clean_note[1] in ["#", "B"] else clean_note[0]
+    )
+
+    try:
+        return NOTES.index(note_to_find)
+    except ValueError:
+        raise ValueError(f"Note '{note_to_find}' could not be resolved to a valid index.") from None
 
 
 # Returns note name from chromatic index (0–11)
@@ -159,16 +167,12 @@ def get_scale_notes(key_tonic_str: str, mode_name: str) -> list[str]:
         tonic_normalized = key_tonic_str
 
     if tonic_normalized not in NOTE_INDEX_MAP:
-        raise ValueError(
-            f"Tonic '{key_tonic_str}' could not be normalized or is invalid."
-        )
+        raise ValueError(f"Tonic '{key_tonic_str}' could not be normalized or is invalid.")
 
     tonic_index = NOTE_INDEX_MAP[tonic_normalized]
 
     # 2. Valider le mode
-    found_mode_key = next(
-        (key for key in MODES_DATA if key.lower() == mode_name.lower()), None
-    )
+    found_mode_key = next((key for key in MODES_DATA if key.lower() == mode_name.lower()), None)
     if not found_mode_key:
         raise ValueError(f"Mode '{mode_name}' not found.")
 

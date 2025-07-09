@@ -1,24 +1,17 @@
-from dotenv import load_dotenv
+from typing import Any, Dict, List, Tuple
+
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
 
-from app.modal_substitution.generator import get_substitutions, get_degrees_to_borrow
-from app.secondary_dominant.generator import (
-    get_secondary_dominant_for_target,
-)
+from app.modal_substitution.generator import get_degrees_to_borrow, get_substitutions
+from app.secondary_dominant.generator import get_secondary_dominant_for_target
 from app.tritone_substitution.generator import get_tritone_substitute
-from app.utils.chords_analyzer import analyze_chord_in_context
-from app.utils.common import (
-    get_diatonic_7th_chord,
-    get_note_from_index,
-    get_note_index,
-)
-from app.utils.borrowed_modes import (
-    get_borrowed_chords,
-)
+from app.utils.borrowed_modes import get_borrowed_chords
+from app.utils.chords_analyzer import QualityAnalysisItem, analyze_chord_in_context
+from app.utils.common import get_note_from_index, get_note_index
 from app.utils.mode_detection_gemini import detect_tonic_and_mode
 from constants import MAJOR_MODES_DATA, MODES_DATA
 
@@ -43,36 +36,33 @@ app.add_middleware(
 
 @app.post("/analyze")
 def get_all_substitutions(request: ProgressionRequest):
-    progression = request.chords
-    model = request.model
+    progression: List[str] = request.chords
+    model: str = request.model
     if not progression:
         return {"error": "Progression cannot be empty"}
 
     try:
         # Find tonic with IA
         tonic, mode, explanations = detect_tonic_and_mode(progression, model)
-        # tonic = "B"
-        # mode = "Harmonic Minor"
-        # explanations = "balbla"
-        detected_tonic_index = get_note_index(tonic)
+        detected_tonic_index: int = get_note_index(tonic)
 
         # Find "foreign" chords from detected mode
-        quality_analysis = [
-            analyze_chord_in_context(chord, detected_tonic_index, mode)
-            for chord in progression
+        quality_analysis: List[QualityAnalysisItem] = [
+            analyze_chord_in_context(chord, detected_tonic_index, mode) for chord in progression
         ]
 
         tonic_name = get_note_from_index(detected_tonic_index)
         borrowed_chords = get_borrowed_chords(quality_analysis, tonic_name, mode)
 
         # Get degrees to borrow
-        degrees_to_borrow = get_degrees_to_borrow(quality_analysis)
+        degrees_to_borrow: List[int | None] = get_degrees_to_borrow(quality_analysis)
+
         # Get major modes substitutions from degrees
-        substitutions = {}
+        substitutions: Dict[str, Dict[str, Any]] = {}
         for mode_name, (_, _, interval) in MAJOR_MODES_DATA.items():
             relative_tonic_index = (detected_tonic_index + interval + 12) % 12
             new_progression = get_substitutions(
-                progression,
+                quality_analysis,
                 relative_tonic_index,
                 degrees_to_borrow,
             )
@@ -80,14 +70,13 @@ def get_all_substitutions(request: ProgressionRequest):
                 "borrowed_scale": f"{get_note_from_index(relative_tonic_index)} Major",
                 "substitution": new_progression,
             }
-        # Harmonize all existing modes
-        harmonized_chords = {}
-        for mode_name, (_, _, interval) in MODES_DATA.items():
-            tonic_index = get_note_index(tonic_name)
 
-            tonic_index = get_note_index(tonic_name)
+        # Harmonize all existing modes
+        harmonized_chords: Dict[str, List[QualityAnalysisItem]] = {}
+        for mode_name, (_, _, _) in MODES_DATA.items():
+            tonic_index: int = get_note_index(tonic_name)
             new_progression = get_substitutions(
-                progression, tonic_index, degrees_to_borrow, mode_name
+                quality_analysis, tonic_index, degrees_to_borrow, mode_name
             )
             harmonized_chords[mode_name] = [
                 analyze_chord_in_context(item["chord"], tonic_index, mode_name)
@@ -95,24 +84,22 @@ def get_all_substitutions(request: ProgressionRequest):
             ]
 
         # Get all secondary dominants for all major modes
-        secondary_dominants = {}
+        secondary_dominants: Dict[str, List[Tuple[str, str, Dict[str, Any]]]] = {}
         for mode_name, substitutions_data in substitutions.items():
-            if mode_name not in secondary_dominants:
-                secondary_dominants[mode_name] = []
+            secondary_dominants[mode_name] = []
             for item in substitutions_data["substitution"]:
                 secondary_dominant, analysis = get_secondary_dominant_for_target(
                     item["chord"], tonic, mode_name
                 )
-                secondary_dominants[mode_name].append(
-                    (secondary_dominant, item["chord"], analysis)
-                )
+                secondary_dominants[mode_name].append((secondary_dominant, item["chord"], analysis))
 
-        tritone_substitutions = []
+        tritone_substitutions: List[List[Any]] = []
         for chord in progression:
-            secondary_dominant, analysis = get_secondary_dominant_for_target(
-                chord, tonic, mode
-            )
-            secondary_dominants[mode_name].append((secondary_dominant, chord, analysis))
+            secondary_dominant, analysis = get_secondary_dominant_for_target(chord, tonic, mode)
+            # Correction: on ajoute une clé "mode" par défaut si jamais non itérée
+            if mode not in secondary_dominants:
+                secondary_dominants[mode] = []
+            secondary_dominants[mode].append((secondary_dominant, chord, analysis))
 
             substitute, analysis = get_tritone_substitute(chord)
             tritone_substitutions.append([chord, substitute, analysis])
