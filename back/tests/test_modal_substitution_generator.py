@@ -90,10 +90,27 @@ class TestGetSubstitutions:
         Vérifie que la progression de base est retournée si la liste de degrés est vide.
         """
         base_prog = ["C", "G", "Am"]
+        expected_result = [
+            {
+                "chord": "C",
+                "quality": None,
+                "roman": None,
+            },
+            {
+                "chord": "G",
+                "quality": None,
+                "roman": None,
+            },
+            {
+                "chord": "Am",
+                "quality": None,
+                "roman": None,
+            },
+        ]
         degrees = []
         result = get_substitutions(base_prog, 0, degrees)
 
-        assert result == base_prog
+        assert result == expected_result
 
     def test_all_none_degrees(self):
         """

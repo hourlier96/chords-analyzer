@@ -68,6 +68,9 @@ def get_substitutions(
     mode_qualities = MAJOR_MODES_DATA["Ionian"][1]
     borrowed_chords: List[dict] = []
 
+    if not degrees_to_borrow:
+        return [{"chord": chord, "roman": None, "quality": None} for chord in progression]
+
     for degree_index in degrees_to_borrow:
         if degree_index is None:
             borrowed_chords.append(
@@ -93,8 +96,6 @@ def get_substitutions(
         )
 
     new_progression_chords: List[dict] = []
-    if not borrowed_chords:
-        return [{"chord": chord, "roman": None, "quality": None} for chord in progression]
 
     borrowed_idx = 0
     for _ in progression:
