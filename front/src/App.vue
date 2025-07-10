@@ -1,8 +1,6 @@
 <template>
-  <div id="app">
-    <!-- Si tu veux un layout global, tu peux le mettre ici -->
-    <router-view />
-  </div>
+  <!-- Si tu veux un layout global, tu peux le mettre ici -->
+  <router-view />
 </template>
 
 <script setup>

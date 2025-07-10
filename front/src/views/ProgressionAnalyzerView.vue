@@ -404,7 +404,6 @@ h3 {
 
 main {
   margin: 0;
-  max-width: 1200px;
   width: 100%;
 }
 
@@ -537,7 +536,7 @@ header {
 }
 
 .control-icon-button.is-active {
-  background-color: #fdcb6e;
+  background-color: #007bff;
   color: #000;
 }
 

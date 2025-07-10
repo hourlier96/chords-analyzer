@@ -4,7 +4,7 @@ import { ref, computed } from "vue";
 
 export const useTempoStore = defineStore("tempo", () => {
   // --- STATE ---
-  const bpm = ref(120); // Valeur par défaut du BPM
+  const bpm = ref(100);
 
   // --- GETTERS ---
   /**
@@ -19,7 +19,7 @@ export const useTempoStore = defineStore("tempo", () => {
   // --- ACTIONS ---
   function setBpm(newBpm) {
     // On s'assure que le BPM reste dans une plage raisonnable
-    bpm.value = Math.max(20, Math.min(300, newBpm));
+    bpm.value = Math.max(40, Math.min(300, newBpm));
   }
 
   return {

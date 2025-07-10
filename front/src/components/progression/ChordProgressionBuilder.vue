@@ -44,6 +44,21 @@
             </button>
           </template>
         </v-tooltip>
+        <v-tooltip
+          location="top"
+          :text="isLooping ? 'Désactiver la loop' : 'Activer la loop'"
+        >
+          <template #activator="{ props }">
+            <button
+              v-bind="props"
+              @click="isLooping = !isLooping"
+              class="control-icon-button"
+              :class="{ 'is-active': isLooping }"
+            >
+              <v-icon :icon="mdiSync" />
+            </button>
+          </template>
+        </v-tooltip>
         <div class="d-flex ga-2">
           <v-tooltip location="top" text="Lire la progression">
             <template #activator="{ props }">
@@ -86,17 +101,6 @@
             </button>
           </template>
         </v-tooltip>
-        <v-tooltip location="top" text="Reset la progression">
-          <template #activator="{ props }">
-            <button
-              v-bind="props"
-              @click="removeAllChords"
-              class="control-icon-button"
-            >
-              <v-icon :icon="mdiClose" />
-            </button>
-          </template>
-        </v-tooltip>
       </div>
     </div>
 
@@ -107,52 +111,10 @@
     />
 
     <div class="progression-grid-container">
-      <div
-        class="progression-grid"
-        :style="{
-          '--total-beats': totalBeats,
-          '--beats-per-measure': beatsPerMeasure,
-          '--beat-width': `${BEAT_WIDTH}px`,
-        }"
-      >
-        <div
-          v-for="beat in totalBeats"
-          :key="`beat-${beat}`"
-          class="beat-marker"
-          :class="{ 'measure-start': (beat - 1) % beatsPerMeasure === 0 }"
-          :style="{ 'grid-column-start': beat }"
-        ></div>
-
-        <draggable
-          :modelValue="progressionWithPositions"
-          @end="onDragEnd"
-          item-key="id"
-          class="draggable-container"
-          ghost-class="ghost"
-        >
-          <template #item="{ element: chord, index }">
-            <div
-              class="chord-wrapper"
-              :style="{ gridColumn: `${chord.start} / span ${chord.duration}` }"
-            >
-              <ChordCard
-                :modelValue="chord"
-                :beat-width="BEAT_WIDTH"
-                @update:modelValue="(newChord) => updateChord(index, newChord)"
-                :is-editing="editingChordId === chord.id"
-                :piano="piano"
-                :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
-                @remove="removeChord(chord.id)"
-                @start-editing="startEditing(chord)"
-                @stop-editing="stopEditing"
-              />
-            </div>
-          </template>
-        </draggable>
-
+      <div style="display: flex; flex-direction: row">
         <div
           class="footer-controls"
-          :style="{ gridColumn: `${totalBeats + 1} / span 2` }"
+          :style="{ gridColumn: `${footerControlsStartBeat} / span 2` }"
         >
           <button
             v-if="!showQuickImport"
@@ -178,7 +140,7 @@
             <input
               type="text"
               v-model="quickImportText"
-              placeholder="Ex: Cmaj7; G7"
+              placeholder="Ex: Cmaj7 G7 D Em7"
               class="quick-import-input"
               @keyup.enter="processQuickImport"
             />
@@ -192,6 +154,66 @@
               <v-icon :icon="mdiClose" />
             </button>
           </div>
+          <v-tooltip location="top" text="Reset la progression">
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                @click="removeAllChords"
+                class="add-button"
+              >
+                <v-icon :icon="mdiClose" />
+              </button>
+            </template>
+          </v-tooltip>
+        </div>
+        <div
+          class="progression-grid"
+          :style="{
+            '--total-beats': totalBeats,
+            '--beats-per-measure': beatsPerMeasure,
+            '--beat-width': `${BEAT_WIDTH}px`,
+          }"
+        >
+          <div
+            v-for="beat in totalBeats"
+            :key="`beat-${beat}`"
+            class="beat-marker"
+            :class="{ 'measure-start': (beat - 1) % beatsPerMeasure === 0 }"
+            :style="{ 'grid-column-start': beat }"
+          ></div>
+
+          <draggable
+            :modelValue="progressionWithPositions"
+            @end="onDragEnd"
+            item-key="id"
+            class="draggable-container"
+            ghost-class="ghost"
+          >
+            <template #item="{ element: chord, index }">
+              <div
+                class="chord-wrapper"
+                :style="{
+                  gridColumn: `${chord.start} / span ${chord.duration}`,
+                }"
+              >
+                <ChordCard
+                  :modelValue="chord"
+                  :beat-width="BEAT_WIDTH"
+                  @update:modelValue="
+                    (newChord) => updateChord(index, newChord)
+                  "
+                  :is-editing="editingChordId === chord.id"
+                  :piano="piano"
+                  :class="{
+                    'is-playing-halo': index === currentlyPlayingIndex,
+                  }"
+                  @remove="removeChord(chord.id)"
+                  @start-editing="startEditing(chord)"
+                  @stop-editing="stopEditing"
+                />
+              </div>
+            </template>
+          </draggable>
         </div>
       </div>
     </div>
@@ -261,6 +283,7 @@ import {
   mdiClose,
   mdiPiano,
   mdiMetronome,
+  mdiSync,
   mdiTimelineClockOutline,
 } from "@mdi/js";
 
@@ -272,7 +295,7 @@ import PianoKeyboard from "@/components/common/PianoKeyboard.vue";
 import ChordCard from "@/components/progression/ChordCard.vue";
 import TempoControl from "@/components/common/TempoControl.vue";
 
-const BEAT_WIDTH = 80;
+const BEAT_WIDTH = 60;
 
 const tempoStore = useTempoStore();
 const analysisStore = useAnalysisStore();
@@ -294,6 +317,7 @@ const currentlyPlayingIndex = ref(null);
 const showQuickImport = ref(false);
 const quickImportText = ref("");
 const isMetronomeActive = ref(true);
+const isLooping = ref(true);
 const timeSignature = ref("4/4");
 
 const metronome = new Tone.MembraneSynth({
@@ -333,6 +357,14 @@ const progressionWithPositions = computed(() => {
     currentBeat += chord.duration;
     return { ...chord, start };
   });
+});
+
+const footerControlsStartBeat = computed(() => {
+  const progressionDuration = progression.value.reduce(
+    (sum, chord) => sum + chord.duration,
+    0
+  );
+  return progressionDuration + 1;
 });
 
 // Calcule le nombre total de temps nécessaires pour afficher la progression
@@ -434,7 +466,7 @@ function removeAllChords() {
 function processQuickImport() {
   if (!quickImportText.value.trim()) return;
   const newChords = quickImportText.value
-    .split(";")
+    .split(/[; -]/)
     .map((str) => str.trim())
     .filter((str) => str)
     .map(parseChordString)
@@ -451,36 +483,43 @@ function cancelQuickImport() {
 }
 
 const playEntireProgression = async () => {
-  if (isPlaying.value) return;
+  if (isPlaying.value) return; // Le bouton "Play" est déjà désactivé, mais c'est une sécurité.
   if (Tone.getContext().state !== "running") {
     await Tone.start();
   }
   isPlaying.value = true;
+
   try {
-    for (const [index, item] of progression.value.entries()) {
-      if (!isPlaying.value) break;
-      if (!item) continue;
+    do {
+      for (const [index, item] of progression.value.entries()) {
+        if (!isPlaying.value) break;
+        if (!item) continue;
 
-      currentlyPlayingIndex.value = index;
-      piano.play(item);
-      selectedChordNotes.value = getNotesForChord(item);
+        currentlyPlayingIndex.value = index;
+        piano.play(item);
+        selectedChordNotes.value = getNotesForChord(item);
 
-      if (isMetronomeActive.value) {
-        const beatDurationSec = tempoStore.beatDurationMs / 1000;
-        for (let beat = 0; beat < item.duration; beat++) {
-          if (isPlaying.value) {
-            metronome.triggerAttack("C5", Tone.now() + beat * beatDurationSec);
+        if (isMetronomeActive.value) {
+          const beatDurationSec = tempoStore.beatDurationMs / 1000;
+          for (let beat = 0; beat < item.duration; beat++) {
+            if (isPlaying.value) {
+              metronome.triggerAttack(
+                "C5",
+                Tone.now() + beat * beatDurationSec
+              );
+            }
           }
         }
+
+        const chordDurationMs = item.duration * tempoStore.beatDurationMs;
+        await sleep(chordDurationMs);
       }
 
-      const chordDurationMs = item.duration * tempoStore.beatDurationMs;
-      await sleep(chordDurationMs);
-    }
+      if (!isPlaying.value) break;
+    } while (isLooping.value);
   } catch (error) {
     console.error("Error during playback:", error);
   } finally {
-    isPlaying.value = false;
     stopSound();
   }
 };
@@ -561,6 +600,7 @@ function stopSound() {
   min-height: 120px;
   position: relative;
   column-gap: 0;
+  overflow: scroll;
 }
 
 /* AJOUTÉ: Style pour le conteneur de l'accord */
@@ -607,17 +647,20 @@ function stopSound() {
 /* Les contrôles sont aussi un item de la grille */
 .footer-controls {
   display: flex;
-  gap: 1rem;
-  align-items: center;
-  grid-row: 1;
-  padding-left: 20px; /* Marge par rapport au dernier temps */
+  flex-direction: column;
+  gap: 8px;
+  position: sticky;
+  justify-content: center;
+  margin-right: 10px;
+  padding-right: 6px;
+  border-right: 1px dashed grey;
 }
 /* FIN MODIFICATION */
 
 .add-button {
-  width: 50px;
-  height: 50px;
-  font-size: 25px;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
   border-radius: 50%;
   border: 2px dashed #555;
   background-color: transparent;

@@ -15,79 +15,80 @@
     </button>
 
     <button class="remove-button" @click="$emit('remove')">×</button>
+    <Teleport to="body">
+      <div v-if="isEditing" class="editor-popover" :style="popoverStyle">
+        <div class="editor-content">
+          <div class="root-note-selector">
+            <template v-for="note in NOTES" :key="note">
+              <div v-if="note.includes(' / ')" class="enharmonic-pair">
+                <button
+                  v-for="enharmonicNote in note.split(' / ')"
+                  :key="enharmonicNote"
+                  @click="updateChord('root', enharmonicNote)"
+                  :class="{ active: isNoteActive(enharmonicNote) }"
+                  class="note-button"
+                >
+                  {{ enharmonicNote }}
+                </button>
+              </div>
 
-    <div v-if="isEditing" class="editor-popover">
-      <div class="editor-content">
-        <div class="root-note-selector">
-          <template v-for="note in NOTES" :key="note">
-            <div v-if="note.includes(' / ')" class="enharmonic-pair">
               <button
-                v-for="enharmonicNote in note.split(' / ')"
-                :key="enharmonicNote"
-                @click="updateChord('root', enharmonicNote)"
-                :class="{ active: isNoteActive(enharmonicNote) }"
+                v-else
+                @click="updateChord('root', note)"
+                :class="{ active: isNoteActive(note) }"
                 class="note-button"
               >
-                {{ enharmonicNote }}
+                {{ note }}
               </button>
+            </template>
+          </div>
+          <div class="main-content">
+            <div class="quality-selector">
+              <div class="category-tabs">
+                <button
+                  v-for="group in QUALITIES"
+                  :key="group.label"
+                  @click="activeQualityCategory = group.label"
+                  :class="{ active: activeQualityCategory === group.label }"
+                  class="category-tab"
+                >
+                  {{ group.label }}
+                </button>
+              </div>
+              <div class="options-grid">
+                <button
+                  v-for="option in activeQualityOptions"
+                  :key="option.value"
+                  @click="updateChord('quality', option.value)"
+                  :class="{ active: chord.quality === option.value }"
+                  class="option-button"
+                >
+                  {{ option.text }}
+                </button>
+              </div>
             </div>
-
-            <button
-              v-else
-              @click="updateChord('root', note)"
-              :class="{ active: isNoteActive(note) }"
-              class="note-button"
-            >
-              {{ note }}
-            </button>
-          </template>
-        </div>
-        <div class="main-content">
-          <div class="quality-selector">
-            <div class="category-tabs">
+            <div class="inversion-control-footer">
               <button
-                v-for="group in QUALITIES"
-                :key="group.label"
-                @click="activeQualityCategory = group.label"
-                :class="{ active: activeQualityCategory === group.label }"
-                class="category-tab"
+                @click="changeInversion(-1)"
+                class="inversion-button"
+                :disabled="chord.inversion === 0"
               >
-                {{ group.label }}
+                -
               </button>
-            </div>
-            <div class="options-grid">
+              <span>Position {{ chord.inversion + 1 }}</span>
               <button
-                v-for="option in activeQualityOptions"
-                :key="option.value"
-                @click="updateChord('quality', option.value)"
-                :class="{ active: chord.quality === option.value }"
-                class="option-button"
+                @click="changeInversion(1)"
+                class="inversion-button"
+                :disabled="chord.inversion === 3"
               >
-                {{ option.text }}
+                +
               </button>
             </div>
           </div>
-          <div class="inversion-control-footer">
-            <button
-              @click="changeInversion(-1)"
-              class="inversion-button"
-              :disabled="chord.inversion === 0"
-            >
-              -
-            </button>
-            <span>Position {{ chord.inversion + 1 }}</span>
-            <button
-              @click="changeInversion(1)"
-              class="inversion-button"
-              :disabled="chord.inversion === 3"
-            >
-              +
-            </button>
-          </div>
         </div>
+        <button @click="$emit('stop-editing')" class="close-editor">OK</button>
       </div>
-      <button @click="$emit('stop-editing')" class="close-editor">OK</button>
-    </div>
+    </Teleport>
 
     <div
       v-if="!isEditing"
@@ -98,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { QUALITIES, NOTES } from "@/constants.js";
 import { getNotesForChord } from "@/sampler.js";
 import { useSettingsStore } from "@/stores/settings.js";
@@ -117,6 +118,9 @@ const emit = defineEmits([
   "start-editing",
   "stop-editing",
 ]);
+
+const chordSlotRef = ref(null);
+const popoverStyle = ref(null);
 
 const chord = computed({
   get: () => props.modelValue,
@@ -139,6 +143,15 @@ watch(
   () => props.isEditing,
   (isEditing) => {
     if (isEditing) {
+      nextTick(() => {
+        if (!chordSlotRef.value) return;
+        const rect = chordSlotRef.value.getBoundingClientRect();
+        popoverStyle.value = {
+          position: "absolute",
+          top: `${rect.bottom + window.scrollY + 10}px`,
+          left: `${rect.left + window.scrollX + rect.width / 2}px`,
+        };
+      });
       let foundCategory = null;
       if (chord.value.quality) {
         for (const group of QUALITIES) {
@@ -273,8 +286,6 @@ function stopResize() {
 /* --- Fenêtre Pop-over --- */
 .editor-popover {
   position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
   transform: translateX(-50%);
   border: 1px solid #555555;
   width: 640px;
@@ -291,17 +302,18 @@ function stopResize() {
 /* --- NOUVEAU : Style pour la poignée de redimensionnement --- */
 .resize-handle {
   position: absolute;
-  right: -1px;
+  right: 1px;
   top: 0;
   bottom: 0;
   width: 10px;
   cursor: ew-resize;
   z-index: 5;
-  border-radius: 4px;
-  border-right: 3px solid #ffffff;
+  border-radius: 5px;
+  border-right: 1px solid #ffffff;
   opacity: 0.5;
   transition: opacity 0.2s;
 }
+
 .resize-handle:hover {
   opacity: 1;
 }
