@@ -1,5 +1,5 @@
 <template>
-  <div class="chord-slot">
+  <div ref="chordSlotRef" class="chord-slot" :style="{ width: cardWidth }">
     <button class="chord-button" @click="$emit('start-editing')">
       {{ chordDisplayName }}
       <div
@@ -42,7 +42,6 @@
             </button>
           </template>
         </div>
-
         <div class="main-content">
           <div class="quality-selector">
             <div class="category-tabs">
@@ -68,7 +67,6 @@
               </button>
             </div>
           </div>
-
           <div class="inversion-control-footer">
             <button
               @click="changeInversion(-1)"
@@ -90,6 +88,12 @@
       </div>
       <button @click="$emit('stop-editing')" class="close-editor">OK</button>
     </div>
+
+    <div
+      v-if="!isEditing"
+      class="resize-handle"
+      @mousedown.prevent="startResize"
+    ></div>
   </div>
 </template>
 
@@ -104,6 +108,7 @@ const settingsStore = useSettingsStore();
 const props = defineProps({
   modelValue: { type: Object, required: true },
   isEditing: { type: Boolean, default: false },
+  beatWidth: { type: Number, required: true },
 });
 
 const emit = defineEmits([
@@ -120,18 +125,16 @@ const chord = computed({
   },
 });
 
+// --- Le reste de votre script existant reste inchangé ---
 const activeQualityCategory = ref(null);
-
 const chordDisplayName = computed(() => {
   return `${chord.value.root}${chord.value.quality}`;
 });
-
 const activeQualityOptions = computed(() => {
   if (!activeQualityCategory.value) return [];
   const group = QUALITIES.find((g) => g.label === activeQualityCategory.value);
   return group ? group.options : [];
 });
-
 watch(
   () => props.isEditing,
   (isEditing) => {
@@ -150,61 +153,109 @@ watch(
       activeQualityCategory.value = null;
     }
   },
-  { immediate: true } // Assure que la logique s'exécute dès le montage si isEditing est vrai
+  { immediate: true }
 );
-
 function isNoteActive(note) {
   return chord.value.root === getNoteValue(note);
 }
-
 function changeInversion(direction) {
   const noteCount = getNotesForChord(chord.value).length;
-
   const maxInversion = noteCount > 0 ? noteCount - 1 : 0;
-
   const currentInversion = chord.value.inversion || 0;
   const newInversion = currentInversion + direction;
-
   if (newInversion >= 0 && newInversion <= maxInversion) {
     updateChord("inversion", newInversion);
   }
 }
-
 function updateChord(key, value) {
   emit("update:modelValue", { ...chord.value, [key]: value });
 }
-
 function getNoteValue(note) {
   return note.split(" / ")[0];
+}
+
+// Propriété calculée pour la largeur de la carte.
+const cardWidth = computed(() => {
+  const duration = props.modelValue.duration || 4;
+  // Utilise la prop au lieu de la constante
+  return `${duration * props.beatWidth}px`;
+});
+
+// Refs pour suivre l'état du redimensionnement
+const initialMouseX = ref(0);
+const initialDuration = ref(0);
+
+/**
+ * Démarre le processus de redimensionnement au clic sur la poignée.
+ */
+function startResize(event) {
+  initialMouseX.value = event.clientX;
+  initialDuration.value = props.modelValue.duration || 4;
+
+  // Ajoute des écouteurs sur toute la fenêtre pour un glissement fluide
+  window.addEventListener("mousemove", doResize);
+  window.addEventListener("mouseup", stopResize);
+}
+
+/**
+ * Calcule et applique le redimensionnement pendant le mouvement de la souris.
+ */
+function doResize(event) {
+  const deltaX = event.clientX - initialMouseX.value;
+  // Utilise la prop pour le calcul
+  const durationChange = Math.round(deltaX / props.beatWidth);
+
+  let newDuration = initialDuration.value + durationChange;
+  newDuration = Math.max(1, newDuration);
+
+  if (newDuration !== props.modelValue.duration) {
+    emit("update:modelValue", {
+      ...props.modelValue,
+      duration: newDuration,
+    });
+  }
+}
+/**
+ * Termine le processus de redimensionnement et nettoie les écouteurs.
+ */
+function stopResize() {
+  window.removeEventListener("mousemove", doResize);
+  window.removeEventListener("mouseup", stopResize);
 }
 </script>
 
 <style scoped>
+/* NOUVEAU : Modifications sur le conteneur principal */
 .chord-slot {
   position: relative;
   cursor: grab;
+  /* La largeur minimale correspond à la largeur d'un temps */
+  min-width: 60px;
+  /* Petite transition pour un redimensionnement plus doux */
+  transition: width 0.1s ease-out;
 }
 .chord-button {
-  padding: 1rem 1.5rem;
-  font-size: 1.5rem;
+  padding: 1rem 0;
+  font-size: 17px;
   font-weight: 600;
   border-radius: 8px;
   border: 2px solid #555;
   background-color: #3c3c3c;
   color: white;
-  min-width: 100px;
+  /* NOUVEAU : La largeur s'adapte maintenant à son parent */
+  width: 100%;
+  height: 100%;
   transition: all 0.2s;
 }
 .chord-button:hover {
   border-color: #007bff;
 }
-
 .remove-button {
   position: absolute;
   top: -10px;
-  right: -10px;
-  width: 24px;
-  height: 24px;
+  left: -5px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   border: none;
   background-color: #ff4d4d;
@@ -216,6 +267,8 @@ function getNoteValue(note) {
   justify-content: center;
   line-height: 1;
 }
+
+/* --- Le reste de vos styles reste inchangé --- */
 
 /* --- Fenêtre Pop-over --- */
 .editor-popover {
@@ -235,7 +288,25 @@ function getNoteValue(note) {
   overflow: hidden;
 }
 
-/* --- Conteneur principal (2 colonnes) --- */
+/* --- NOUVEAU : Style pour la poignée de redimensionnement --- */
+.resize-handle {
+  position: absolute;
+  right: -1px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  z-index: 5;
+  border-radius: 4px;
+  border-right: 3px solid #ffffff;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.resize-handle:hover {
+  opacity: 1;
+}
+
+/* --- (Collez le reste de vos styles ici) --- */
 .editor-content {
   display: flex;
   flex-direction: row; /* Garde la disposition en 2 colonnes */

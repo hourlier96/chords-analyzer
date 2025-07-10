@@ -218,30 +218,35 @@ const defaultProgression = [
     root: "D",
     quality: "7",
     inversion: 2,
+    duration: 2,
   },
   {
     id: 2,
     root: "Bb",
     quality: "maj7",
     inversion: 0,
+    duration: 2,
   },
   {
     id: 3,
     root: "C",
     quality: "7",
     inversion: 3,
+    duration: 2,
   },
   {
     id: 4,
     root: "G",
     quality: "7b9",
     inversion: 0,
+    duration: 2,
   },
   {
     id: 5,
     root: "F",
     quality: "maj9",
     inversion: 0,
+    duration: 2,
   },
 ];
 
@@ -395,13 +400,11 @@ h3 {
   display: flex;
   justify-content: center;
   min-height: 100vh;
-  padding: 2rem;
 }
 
 main {
   margin: 0;
   max-width: 1200px;
-  padding: 2rem;
   width: 100%;
 }
 
@@ -414,10 +417,11 @@ header {
    Conteneurs et Grilles
    ========================================================================== */
 .results-box {
-  background-color: #2f2f2f;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
+  margin-bottom: 0.5rem;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Styles pour le conteneur des grilles et du bouton central */
