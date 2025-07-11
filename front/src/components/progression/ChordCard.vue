@@ -187,35 +187,24 @@ function getNoteValue(note) {
   return note.split(" / ")[0];
 }
 
-// Propriété calculée pour la largeur de la carte.
 const cardWidth = computed(() => {
   const duration = props.modelValue.duration || 4;
-  // Utilise la prop au lieu de la constante
   return `${duration * props.beatWidth}px`;
 });
 
-// Refs pour suivre l'état du redimensionnement
 const initialMouseX = ref(0);
 const initialDuration = ref(0);
 
-/**
- * Démarre le processus de redimensionnement au clic sur la poignée.
- */
 function startResize(event) {
   initialMouseX.value = event.clientX;
   initialDuration.value = props.modelValue.duration || 4;
 
-  // Ajoute des écouteurs sur toute la fenêtre pour un glissement fluide
   window.addEventListener("mousemove", doResize);
   window.addEventListener("mouseup", stopResize);
 }
 
-/**
- * Calcule et applique le redimensionnement pendant le mouvement de la souris.
- */
 function doResize(event) {
   const deltaX = event.clientX - initialMouseX.value;
-  // Utilise la prop pour le calcul
   const durationChange = Math.round(deltaX / props.beatWidth);
 
   let newDuration = initialDuration.value + durationChange;
@@ -238,13 +227,10 @@ function stopResize() {
 </script>
 
 <style scoped>
-/* NOUVEAU : Modifications sur le conteneur principal */
 .chord-slot {
   position: relative;
   cursor: grab;
-  /* La largeur minimale correspond à la largeur d'un temps */
   min-width: 60px;
-  /* Petite transition pour un redimensionnement plus doux */
   transition: width 0.1s ease-out;
 }
 .chord-button {
@@ -255,7 +241,6 @@ function stopResize() {
   border: 2px solid #555;
   background-color: #3c3c3c;
   color: white;
-  /* NOUVEAU : La largeur s'adapte maintenant à son parent */
   width: 100%;
   height: 100%;
   transition: all 0.2s;
@@ -281,9 +266,6 @@ function stopResize() {
   line-height: 1;
 }
 
-/* --- Le reste de vos styles reste inchangé --- */
-
-/* --- Fenêtre Pop-over --- */
 .editor-popover {
   position: absolute;
   transform: translateX(-50%);
@@ -299,7 +281,6 @@ function stopResize() {
   overflow: hidden;
 }
 
-/* --- NOUVEAU : Style pour la poignée de redimensionnement --- */
 .resize-handle {
   position: absolute;
   right: 1px;
@@ -318,14 +299,12 @@ function stopResize() {
   opacity: 1;
 }
 
-/* --- (Collez le reste de vos styles ici) --- */
 .editor-content {
   display: flex;
-  flex-direction: row; /* Garde la disposition en 2 colonnes */
-  max-height: 270px; /* Hauteur maximale du contenu éditable */
+  flex-direction: row;
+  max-height: 270px;
 }
 
-/* --- Colonne de gauche (Notes) --- */
 .root-note-selector {
   display: flex;
   flex-direction: column;
@@ -363,7 +342,6 @@ function stopResize() {
   overflow: hidden;
 }
 
-/* --- Section des qualités d'accords --- */
 .quality-selector {
   flex-grow: 1;
   padding: 10px;
@@ -418,7 +396,7 @@ function stopResize() {
   padding: 0.25rem;
 }
 .options-grid button {
-  width: 100%; /* S'adapte à la grille */
+  width: 100%;
   padding: 0.5rem 0.25rem;
   border-radius: 4px;
   border: 1px solid #5f5f5f;
@@ -439,19 +417,18 @@ function stopResize() {
   font-weight: bold;
 }
 
-/* --- Footer des renversements (Styles corrigés pour le thème sombre) --- */
 .inversion-control-footer {
-  flex-shrink: 0; /* Empêche le footer de se réduire */
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
-  border-top: 1px solid #444; /* Bordure plus adaptée au thème */
+  border-top: 1px solid #444;
   background-color: #2c2c2e;
 }
 .inversion-control-footer span {
   font-weight: 500;
-  color: #d1d1d6; /* Texte clair visible sur fond sombre */
+  color: #d1d1d6;
 }
 .inversion-button {
   font-family: monospace;
@@ -461,8 +438,8 @@ function stopResize() {
   padding: 5px 15px;
   border-radius: 8px;
   border: 1px solid #5f5f5f;
-  background-color: #4a4a4a; /* Fond adapté */
-  color: white; /* Texte blanc */
+  background-color: #4a4a4a;
+  color: white;
   cursor: pointer;
   transition: background-color 0.2s;
 }
@@ -473,7 +450,6 @@ function stopResize() {
   background-color: #3a3a3c;
 }
 
-/* --- Bouton de fermeture "OK" --- */
 .close-editor {
   padding: 12px;
   background-color: #0a84ff;

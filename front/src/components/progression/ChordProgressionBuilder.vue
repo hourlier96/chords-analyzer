@@ -273,27 +273,22 @@ import {
   mdiTimelineClockOutline,
 } from "@mdi/js";
 
-// --- NOUVELLES IMPORTATIONS ---
 import { useProgressionPlayer } from "@/composables/useProgressionPlayer";
 import { piano, getNotesForChord } from "@/sampler.js";
 import { sleep } from "@/utils.js";
 import { useTempoStore } from "@/stores/tempo.js";
 import { useAnalysisStore } from "@/stores/analysis.js";
 
-// --- COMPOSANTS ---
 import PianoKeyboard from "@/components/common/PianoKeyboard.vue";
 import ChordCard from "@/components/progression/ChordCard.vue";
 import TimelineGrid from "@/components/common/TimelineGrid.vue";
 import TempoControl from "@/components/common/TempoControl.vue";
 
-// --- CONSTANTES ---
 const BEAT_WIDTH = 60;
 
-// --- STORES ---
 const tempoStore = useTempoStore();
 const analysisStore = useAnalysisStore();
 
-// --- PROPS & EMITS ---
 const props = defineProps({
   modelValue: { type: Array, required: true },
   isLoading: { type: Boolean, default: false },
@@ -364,15 +359,12 @@ const totalBeats = computed(() => {
   return Math.ceil(totalWithMargin / beatsInMeasureVal) * beatsInMeasureVal;
 });
 
-// --- LOGIQUE DE LECTURE (VIA LE COMPOSABLE) ---
-
-// 1. Définir les callbacks spécifiques à ce composant
 const startAnimation = () => {
   playheadPosition.value = 0;
   const playbackStartTime = Tone.now() * 1000;
 
   const animatePlayhead = () => {
-    if (!isPlaying.value) return; // Utilise isPlaying du composable
+    if (!isPlaying.value) return;
     const elapsedTimeMs = Tone.now() * 1000 - playbackStartTime;
     const elapsedBeats = elapsedTimeMs / tempoStore.beatDurationMs;
     playheadPosition.value = elapsedBeats * BEAT_WIDTH;
@@ -389,7 +381,7 @@ const stopAnimation = () => {
     animationFrameId.value = null;
   }
   playheadPosition.value = 0;
-  piano.releaseAll(); // Coupe aussi le son du piano à l'arrêt
+  piano.releaseAll();
 };
 
 const playChordItem = async ({ item }) => {
@@ -402,7 +394,6 @@ const playChordItem = async ({ item }) => {
   await sleep(chordDurationMs);
 };
 
-// 2. Initialiser le composable avec les refs et les callbacks
 const { isPlaying, currentlyPlayingIndex, play, stop } = useProgressionPlayer({
   progression,
   tempoStore,
@@ -414,11 +405,8 @@ const { isPlaying, currentlyPlayingIndex, play, stop } = useProgressionPlayer({
   onStop: stopAnimation,
 });
 
-// 3. Assigner les fonctions retournées aux noms utilisés dans le template
 const playEntireProgression = play;
 const stopSound = stop;
-
-// --- AUTRES MÉTHODES DU COMPOSANT ---
 
 function onDragEnd(event) {
   const { oldIndex, newIndex } = event;
@@ -631,7 +619,7 @@ function cancelQuickImport() {
   color: white;
   border-radius: 6px;
   padding: 0.6rem 1rem;
-  width: 150px; /* Largeur adaptée à la colonne */
+  width: 150px;
   text-align: center;
 }
 .quick-import-input::placeholder {
@@ -657,7 +645,6 @@ function cancelQuickImport() {
   background-color: #f44336;
 }
 
-/* Styles pour la section d'analyse qui restent inchangés */
 .analyze-section-container {
   margin-top: 2rem;
   display: flex;

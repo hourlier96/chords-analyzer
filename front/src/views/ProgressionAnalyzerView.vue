@@ -125,7 +125,6 @@
             :piano="piano"
             :secondary-dominants-map="secondaryDominantsMap"
           />
-
           <div class="action-button-container">
             <div class="mode-button-wrapper">
               <v-tooltip location="top" text="Substitutions modales">
@@ -325,17 +324,13 @@ function resetActiveMode() {
   activeMode.value = null;
 }
 
-const progressionForApi = computed(() => {
-  return progression.value.map((chord) => `${chord.root}${chord.quality}`);
-});
-
 async function analyzeProgression() {
   isLoading.value = true;
   analysisError.value = null;
   analysisStore.clearResult();
 
-  const chords = progressionForApi.value;
-  if (chords.length < 2) {
+  const chordsData = progression.value;
+  if (chordsData.length < 2) {
     analysisError.value =
       "Veuillez construire une progression d'au moins 2 accords.";
     isLoading.value = false;
@@ -346,8 +341,7 @@ async function analyzeProgression() {
     const response = await fetch("http://localhost:8000/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // MODIFIÉ: Utilise la variable d'état pour le modèle
-      body: JSON.stringify({ chords, model: selectedAiModel.value }),
+      body: JSON.stringify({ chordsData, model: selectedAiModel.value }),
     });
     if (!response.ok)
       throw new Error(`Erreur du serveur: ${response.statusText}`);
@@ -367,9 +361,6 @@ async function analyzeProgression() {
 </script>
 
 <style>
-/* ==========================================================================
-   Styles de Base et Typographie
-   ========================================================================== */
 :root {
   background-color: #242424;
   color: rgba(255, 255, 255, 0.87);
@@ -391,9 +382,6 @@ h3 {
   padding-bottom: 0.5rem;
 }
 
-/* ==========================================================================
-   Mise en page principale
-   ========================================================================== */
 #app {
   align-items: flex-start;
   box-sizing: border-box;
@@ -412,9 +400,6 @@ header {
   text-align: center;
 }
 
-/* ==========================================================================
-   Conteneurs et Grilles
-   ========================================================================== */
 .results-box {
   border-radius: 8px;
   margin-bottom: 0.5rem;
@@ -423,23 +408,20 @@ header {
   margin-right: auto;
 }
 
-/* Styles pour le conteneur des grilles et du bouton central */
 .analysis-grids-container {
-  align-items: center; /* Aligne verticalement les grilles et le bouton */
+  align-items: center;
   display: flex;
   flex-direction: row;
   gap: 1.5rem;
 }
 
-/* Fait en sorte que les grilles prennent l'espace disponible */
 .analysis-grids-container > * {
   flex: 1;
   min-width: 0;
 }
 
-/* Conteneur spécifique pour le bouton pour éviter qu'il ne s'étire */
 .action-button-container {
-  flex-grow: 0; /* Empêche le conteneur de grandir */
+  flex-grow: 0;
   flex-shrink: 0;
 }
 
@@ -454,9 +436,6 @@ header {
   padding: 8px 0;
 }
 
-/* ==========================================================================
-   Composants (Boutons, Titres, etc.)
-   ========================================================================== */
 .result-title {
   color: #a0cfff;
   font-size: 40px;
@@ -481,7 +460,6 @@ header {
   position: relative;
 }
 
-/* --- Styles des boutons --- */
 .control-icon-button {
   align-items: center;
   background-color: #4a4a4a;
@@ -522,9 +500,6 @@ header {
   z-index: 10;
 }
 
-/* ==========================================================================
-   Modificateurs et États
-   ========================================================================== */
 .control-icon-button:hover,
 .reset-mode-button:hover {
   background-color: #5a5a5a;
@@ -548,9 +523,6 @@ header {
   background-color: #6497cc;
 }
 
-/* ==========================================================================
-   Transitions Vue.js
-   ========================================================================== */
 .grid-appear-enter-active {
   transition: all 1s ease-in-out;
 }

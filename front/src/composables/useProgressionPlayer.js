@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { piano } from "@/sampler.js";
 import * as Tone from "tone";
 
 /**
@@ -33,10 +34,9 @@ export function useProgressionPlayer({
     isPlaying.value = false;
     currentlyPlayingIndex.value = -1;
     if (onStop) {
-      onStop(); // Exécuter le nettoyage spécifique (ex: cancelAnimationFrame)
+      onStop();
     }
-    // Idéalement, votre instrument a une méthode pour tout couper
-    // piano.releaseAll();
+    piano.releaseAll();
   };
 
   const play = async () => {

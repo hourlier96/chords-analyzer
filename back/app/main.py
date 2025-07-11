@@ -4,9 +4,9 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 from app.modal_substitution.generator import get_degrees_to_borrow, get_substitutions
+from app.schema import ChordItem, ProgressionRequest
 from app.secondary_dominant.generator import get_secondary_dominant_for_target
 from app.tritone_substitution.generator import get_tritone_substitute
 from app.utils.borrowed_modes import get_borrowed_chords
@@ -16,11 +16,6 @@ from app.utils.mode_detection_gemini import detect_tonic_and_mode
 from constants import MAJOR_MODES_DATA, MODES_DATA
 
 load_dotenv()
-
-
-class ProgressionRequest(BaseModel):
-    chords: List[str]
-    model: str
 
 
 app = FastAPI()
@@ -36,20 +31,28 @@ app.add_middleware(
 
 @app.post("/analyze")
 def get_all_substitutions(request: ProgressionRequest):
-    progression: List[str] = request.chords
+    progression_data: List[ChordItem] = request.chordsData
     model: str = request.model
-    if not progression:
+    if not progression_data:
         return {"error": "Progression cannot be empty"}
 
+    progression = [f"{item.root}{item.quality}" for item in progression_data]
     try:
         # Find tonic with IA
         tonic, mode, explanations = detect_tonic_and_mode(progression, model)
+        # tonic, mode, explanations = "A", "Ionian", "blabla"  # Mocked for testing
         detected_tonic_index: int = get_note_index(tonic)
 
         # Find "foreign" chords from detected mode
-        quality_analysis: List[QualityAnalysisItem] = [
-            analyze_chord_in_context(chord, detected_tonic_index, mode) for chord in progression
-        ]
+        quality_analysis: List[QualityAnalysisItem] = []
+        for chord_data in progression_data:
+            chord_name = f"{chord_data.root}{chord_data.quality}"
+            # Analyze each chord in the context of the detected tonic and mode
+            analyzed_chord = analyze_chord_in_context(chord_name, detected_tonic_index, mode)
+            # Add additional properties from the request
+            analyzed_chord["inversion"] = chord_data.inversion
+            analyzed_chord["duration"] = chord_data.duration
+            quality_analysis.append(analyzed_chord)
 
         tonic_name = get_note_from_index(detected_tonic_index)
         borrowed_chords = get_borrowed_chords(quality_analysis, tonic_name, mode)

@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue"; // 'watch' a été ajouté
 import * as Tone from "tone";
 import {
   mdiPlay,
@@ -195,13 +195,6 @@ const props = defineProps({
 
 const emit = defineEmits(["update:progressionItems"]);
 
-const localProgression = computed({
-  get: () => props.progressionItems,
-  set: (newValue) => {
-    emit("update:progressionItems", newValue);
-  },
-});
-
 const tempoStore = useTempoStore();
 const timeSignature = ref("4/4");
 const isMetronomeActive = ref(true);
@@ -218,6 +211,19 @@ const metronome = new Tone.MembraneSynth({
 }).toDestination();
 metronome.volume.value = -6;
 
+const progressionState = ref([]);
+
+watch(
+  () => props.progressionItems,
+  (newItems) => {
+    progressionState.value = newItems.map((item) => ({
+      ...item,
+      duration: item.duration || 2, // Assigne une durée par défaut si absente
+    }));
+  },
+  { immediate: true, deep: true }
+);
+
 const rootNote = computed(() => props.title.split(" ")[0]);
 const availableModes = computed(() =>
   Object.keys(props.analysis.result.harmonized_chords)
@@ -228,21 +234,17 @@ const beatsPerMeasure = computed(() => {
 });
 
 const displayedProgression = computed(() => {
-  let baseProgression;
+  let baseProgression = progressionState.value;
 
-  if (!selectedMode.value) {
-    baseProgression = localProgression.value;
-  } else {
+  if (selectedMode.value) {
     const newModeChords =
       props.analysis.result.harmonized_chords[selectedMode.value];
     const originalModeName = props.title.split(" ")[1];
     const originalModeChords =
       props.analysis.result.harmonized_chords[originalModeName];
 
-    if (!newModeChords || !originalModeChords) {
-      baseProgression = localProgression.value;
-    } else {
-      baseProgression = localProgression.value.map((item, index) => {
+    if (newModeChords && originalModeChords) {
+      baseProgression = progressionState.value.map((item, index) => {
         const isOriginallyDiatonic = originalModeChords[index] !== null;
         const newChordData = newModeChords[index];
 
@@ -250,21 +252,18 @@ const displayedProgression = computed(() => {
           return {
             ...item,
             ...newChordData,
-            duration: item.duration,
           };
-        } else {
-          return item;
         }
+        return item;
       });
     }
   }
 
   let currentBeat = 1;
   return baseProgression.map((chord) => {
-    const duration = chord.duration && chord.duration > 0 ? chord.duration : 2;
     const start = currentBeat;
-    currentBeat += duration;
-    return { ...chord, duration, start };
+    currentBeat += chord.duration;
+    return { ...chord, start };
   });
 });
 
@@ -275,15 +274,17 @@ const totalBeats = computed(() => {
   );
   const beatsInMeasureVal = beatsPerMeasure.value;
   if (progressionDuration === 0) return beatsInMeasureVal;
-  if (progressionDuration % beatsInMeasureVal === 0)
-    return progressionDuration + 1;
+  if (progressionDuration % beatsInMeasureVal === 0) return progressionDuration;
   return Math.ceil(progressionDuration / beatsInMeasureVal) * beatsInMeasureVal;
 });
 
 function updateProgressionItem(index, newItem) {
-  const newProgression = [...localProgression.value];
-  newProgression[index] = newItem;
-  localProgression.value = newProgression;
+  const newProgression = [...progressionState.value];
+  const cleanItem = { ...newItem };
+  delete cleanItem.start;
+  newProgression[index] = cleanItem;
+  progressionState.value = newProgression;
+  emit("update:progressionItems", newProgression);
 }
 
 const parseChordString = (chordStr) => {
@@ -493,36 +494,6 @@ const stopSound = stop;
   background-color: #2c2c2c;
   border: 1px solid #444;
   border-radius: 8px;
-}
-
-.rhythm-timeline {
-  display: grid;
-  grid-template-columns: repeat(var(--total-beats, 8), var(--beat-width));
-  height: 30px;
-  position: relative;
-  border-bottom: 1px solid #555;
-  margin-bottom: 10px;
-}
-
-.rhythm-timeline .beat-marker {
-  height: 100%;
-  width: 1px;
-  background-color: rgba(255, 255, 255, 0.2);
-  justify-self: start;
-  position: relative;
-}
-
-.rhythm-timeline .beat-marker.measure-start {
-  width: 2px;
-  background-color: rgba(255, 255, 255, 0.6);
-}
-
-.measure-number {
-  position: absolute;
-  top: -2px;
-  left: 4px;
-  font-size: 12px;
-  color: #aaa;
 }
 
 .chords-track {

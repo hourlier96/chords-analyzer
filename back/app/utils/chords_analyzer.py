@@ -1,4 +1,4 @@
-from typing import Optional, TypedDict
+from typing import NotRequired, Optional, TypedDict
 
 from app.utils.common import (
     get_note_from_index,
@@ -41,6 +41,8 @@ class QualityAnalysisItem(TypedDict):
     expected_quality: Optional[str]
     expected_chord_name: Optional[str]
     is_diatonic: bool | None
+    inversion: NotRequired[int]
+    duration: NotRequired[int]
 
 
 def analyze_chord_in_context(chord_name, tonic_index, mode_name) -> QualityAnalysisItem:

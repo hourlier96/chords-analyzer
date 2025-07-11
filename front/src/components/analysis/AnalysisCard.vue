@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue"; // ref a été ajouté
+import { ref, computed } from "vue";
 import { mdiInformation } from "@mdi/js";
 import PlayButton from "@/components/common/PlayButton.vue";
 
@@ -60,14 +60,14 @@ const props = defineProps({
   showSecondaryDominant: { type: Boolean, required: true },
   secondaryDominantChord: { type: String, default: null },
   isSubstitution: { type: Boolean, default: false },
-  // NOUVEAU : Prop essentielle pour le calcul de la largeur
   beatWidth: { type: Number, required: true },
 });
 
-// NOUVEAU : Événement pour mettre à jour l'objet 'item' dans le parent
 const emit = defineEmits(["update:item"]);
 
-// --- Le reste du script existant reste inchangé ---
+const initialMouseX = ref(0);
+const initialDuration = ref(0);
+
 const borrowedInfo = computed(() => {
   return props.analysis.result.borrowed_chords?.[props.item.chord];
 });
@@ -90,16 +90,11 @@ function getChordClass(item) {
   };
 }
 
-// Refs pour suivre l'état du redimensionnement
-const initialMouseX = ref(0);
-const initialDuration = ref(0);
-
 /**
  * Démarre le processus de redimensionnement au clic sur la poignée.
  */
 function startResize(event) {
   initialMouseX.value = event.clientX;
-  // Lit la durée initiale depuis la prop 'item'
   initialDuration.value = props.item.duration || 4;
 
   window.addEventListener("mousemove", doResize);
@@ -110,21 +105,14 @@ function startResize(event) {
  * Calcule et applique le redimensionnement pendant le mouvement de la souris.
  */
 function doResize(event) {
-  console.log(props.item.duration);
   const deltaX = event.clientX - initialMouseX.value;
   const durationChange = Math.round(deltaX / props.beatWidth);
-
   let newDuration = initialDuration.value + durationChange;
-  // S'assure que la durée est au moins de 1 temps
   newDuration = Math.max(1, newDuration);
-
-  // Émet un événement seulement si la durée a changé
-  if (newDuration !== props.item.duration) {
-    emit("update:item", {
-      ...props.item,
-      duration: newDuration,
-    });
-  }
+  emit("update:item", {
+    ...props.item,
+    duration: newDuration,
+  });
 }
 
 /**
@@ -225,14 +213,14 @@ function stopResize() {
   font-size: 10px;
 }
 
-/* NOUVEAU : Style pour la poignée de redimensionnement (copié de ChordSlot) */
+/* Style pour la poignée de redimensionnement*/
 .resize-handle {
   position: absolute;
   right: 1px;
   top: 0;
   bottom: 0;
   width: 10px;
-  cursor: ew-resize; /* Curseur indiquant un redimensionnement horizontal */
+  cursor: ew-resize;
   z-index: 5;
   border-radius: 5px;
   border-right: 1px solid #ffffff;
