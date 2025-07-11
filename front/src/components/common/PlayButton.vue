@@ -4,8 +4,8 @@
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      width="20"
-      height="20"
+      width="14"
+      height="14"
     >
       <path d="M8 5v14l11-7z" />
     </svg>
@@ -31,14 +31,11 @@ async function play() {
 
 <style scoped>
 .listen-button {
-  position: absolute;
-  bottom: -10px;
-  left: -10px;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 1 px solid;
-  background-color: #25303b;
+  background-color: #007bff;
   color: white;
   cursor: pointer;
   display: flex;

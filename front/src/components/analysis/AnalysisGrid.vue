@@ -23,26 +23,62 @@
           <span>Emprunts</span>
         </div>
       </div>
-      <div class="header-controls">
-        <v-tooltip v-if="!isPlaying" location="top" text="Lire la progression">
+
+      <div class="right-controls">
+        <TempoControl />
+        <div class="time-signature-selector">
+          <v-tooltip location="top" text="Signature Rythmique">
+            <template #activator="{ props: tooltipProps }">
+              <v-icon :icon="mdiTimelineClockOutline" v-bind="tooltipProps" />
+            </template>
+          </v-tooltip>
+          <label
+            v-for="sig in ['3/4', '4/4', '5/4']"
+            :key="sig"
+            class="radio-label-sm"
+            :class="{ active: timeSignature === sig }"
+          >
+            <input
+              type="radio"
+              name="time-signature"
+              :value="sig"
+              :checked="timeSignature === sig"
+              @change="timeSignature = sig"
+            />
+            {{ sig }}
+          </label>
+        </div>
+        <v-tooltip
+          location="top"
+          :text="
+            isMetronomeActive
+              ? 'Désactiver le métronome'
+              : 'Activer le métronome'
+          "
+        >
           <template #activator="{ props }">
             <button
               v-bind="props"
-              @click="playEntireProgression"
+              @click="isMetronomeActive = !isMetronomeActive"
               class="control-icon-button"
+              :class="{ 'is-active': isMetronomeActive }"
             >
-              <v-icon :icon="mdiPlay" />
+              <v-icon :icon="mdiMetronome" />
             </button>
           </template>
         </v-tooltip>
-        <v-tooltip v-else location="top" text="Stopper la lecture">
+        <v-tooltip
+          location="top"
+          :text="isLooping ? 'Désactiver la loop' : 'Activer la loop'"
+        >
           <template #activator="{ props }">
             <button
               v-bind="props"
-              @click="stopSound()"
+              @click="isLooping = !isLooping"
               class="control-icon-button"
+              :class="{ 'is-active': isLooping }"
             >
-              <v-icon :icon="mdiStop" />
+              <v-icon :icon="mdiSync" />
             </button>
           </template>
         </v-tooltip>
@@ -59,24 +95,71 @@
             </button>
           </template>
         </v-tooltip>
+
+        <div class="d-flex ga-2">
+          <v-tooltip location="top" text="Lire la progression">
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                @click="playEntireProgression"
+                class="control-icon-button"
+                :disabled="isPlaying"
+              >
+                <v-icon :icon="mdiPlay" />
+              </button>
+            </template>
+          </v-tooltip>
+          <v-tooltip location="top" text="Stopper la lecture">
+            <template #activator="{ props }">
+              <button
+                v-bind="props"
+                @click="stopSound"
+                class="control-icon-button"
+                :disabled="!isPlaying"
+              >
+                <v-icon :icon="mdiStop" />
+              </button>
+            </template>
+          </v-tooltip>
+        </div>
       </div>
     </div>
-    <div class="analysis-grid">
+
+    <div class="progression-grid-container">
+      <TimelineGrid
+        :total-beats="totalBeats"
+        :beats-per-measure="beatsPerMeasure"
+        :beat-width="BEAT_WIDTH"
+        :is-playing="isPlaying"
+        :playhead-position="playheadPosition"
+      />
       <div
-        v-for="(item, index) in displayedProgression"
-        :key="`${selectedMode || 'original'}-${index}`"
-        class="chord-progression-group"
-        :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
+        class="chords-track"
+        :style="{
+          '--total-beats': totalBeats,
+          '--beat-width': `${BEAT_WIDTH}px`,
+        }"
       >
-        <AnalysisCard
-          :piano="piano"
-          :item="item"
-          :analysis="analysis"
-          :current-index="index"
-          :show-secondary-dominant="showSecondaryDominants"
-          :secondary-dominant-chord="secondaryDominantsMap.get(item.chord)"
-          :is-substitution="isSubstitution"
-        />
+        <div
+          v-for="(item, index) in displayedProgression"
+          :key="item.id"
+          class="chord-wrapper"
+          :style="{
+            gridColumn: `${item.start} / span ${item.duration}`,
+          }"
+          :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
+        >
+          <AnalysisCard
+            :piano="piano"
+            :item="item"
+            :analysis="analysis"
+            :show-secondary-dominant="showSecondaryDominants"
+            :secondary-dominant-chord="secondaryDominantsMap.get(item.chord)"
+            :is-substitution="isSubstitution"
+            :beat-width="BEAT_WIDTH"
+            @update:item="(newItem) => updateProgressionItem(index, newItem)"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -85,147 +168,203 @@
 <script setup>
 import { ref, computed } from "vue";
 import * as Tone from "tone";
-import { mdiPlay, mdiStop } from "@mdi/js";
+import {
+  mdiPlay,
+  mdiStop,
+  mdiMetronome,
+  mdiSync,
+  mdiTimelineClockOutline,
+} from "@mdi/js";
 
+import { useProgressionPlayer } from "@/composables/useProgressionPlayer";
 import { sleep } from "@/utils.js";
+import { useTempoStore } from "@/stores/tempo.js";
 import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
+import TimelineGrid from "@/components/common/TimelineGrid.vue";
+import TempoControl from "@/components/common/TempoControl.vue";
 
+const BEAT_WIDTH = 60;
 const props = defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-  progressionItems: {
-    type: Array,
-    required: true,
-  },
-  analysis: {
-    type: Object,
-    required: true,
-  },
-  piano: {
-    type: Object,
-    required: true,
-  },
-  secondaryDominantsMap: {
-    type: Map,
-    required: true,
-  },
-  isSubstitution: {
-    type: Boolean,
-    default: false,
+  title: { type: String, required: true },
+  progressionItems: { type: Array, required: true },
+  analysis: { type: Object, required: true },
+  piano: { type: Object, required: true },
+  secondaryDominantsMap: { type: Map, required: true },
+  isSubstitution: { type: Boolean, default: false },
+});
+
+const emit = defineEmits(["update:progressionItems"]);
+
+const localProgression = computed({
+  get: () => props.progressionItems,
+  set: (newValue) => {
+    emit("update:progressionItems", newValue);
   },
 });
 
-// État pour le mode sélectionné, initialisé avec le nom du mode de la prop 'title'
+const tempoStore = useTempoStore();
+const timeSignature = ref("4/4");
+const isMetronomeActive = ref(true);
+const isLooping = ref(true);
 const selectedMode = ref(null);
+const showSecondaryDominants = ref(false);
+const playheadPosition = ref(0);
+const animationFrameId = ref(null);
 
-// Extrait la note racine (ex: "A#") du titre
+const metronome = new Tone.MembraneSynth({
+  pitchDecay: 0.5,
+  octaves: 0.5,
+  envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 },
+}).toDestination();
+metronome.volume.value = -6;
+
 const rootNote = computed(() => props.title.split(" ")[0]);
-
-// Liste des modes disponibles pour le dropdown
 const availableModes = computed(() =>
   Object.keys(props.analysis.result.harmonized_chords)
 );
 
-// Propriété calculée qui génère la progression à afficher
+const beatsPerMeasure = computed(() => {
+  return parseInt(timeSignature.value.split("/")[0], 10);
+});
+
 const displayedProgression = computed(() => {
-  // Si aucun mode n'est sélectionné, retourne la progression d'origine
+  let baseProgression;
+
   if (!selectedMode.value) {
-    return props.progressionItems;
-  }
+    baseProgression = localProgression.value;
+  } else {
+    const newModeChords =
+      props.analysis.result.harmonized_chords[selectedMode.value];
+    const originalModeName = props.title.split(" ")[1];
+    const originalModeChords =
+      props.analysis.result.harmonized_chords[originalModeName];
 
-  const newModeChords =
-    props.analysis.result.harmonized_chords[selectedMode.value];
-  const originalModeName = props.title.split(" ")[1];
-  const originalModeChords =
-    props.analysis.result.harmonized_chords[originalModeName];
-
-  if (!newModeChords || !originalModeChords) {
-    return props.progressionItems;
-  }
-
-  return props.progressionItems.map((item, index) => {
-    const isOriginallyDiatonic = originalModeChords[index] !== null;
-    const newChordData = newModeChords[index];
-    if (isOriginallyDiatonic && newChordData) {
-      return {
-        ...item,
-        ...newChordData,
-        found_numeral:
-          newChordData.chord !== "N/A" ? newChordData.found_numeral : null,
-      };
+    if (!newModeChords || !originalModeChords) {
+      baseProgression = localProgression.value;
     } else {
-      return item;
+      baseProgression = localProgression.value.map((item, index) => {
+        const isOriginallyDiatonic = originalModeChords[index] !== null;
+        const newChordData = newModeChords[index];
+
+        if (isOriginallyDiatonic && newChordData) {
+          return {
+            ...item,
+            ...newChordData,
+            duration: item.duration,
+          };
+        } else {
+          return item;
+        }
+      });
     }
+  }
+
+  let currentBeat = 1;
+  return baseProgression.map((chord) => {
+    const duration = chord.duration && chord.duration > 0 ? chord.duration : 2;
+    const start = currentBeat;
+    currentBeat += duration;
+    return { ...chord, duration, start };
   });
 });
 
-const showSecondaryDominants = ref(false);
-const isPlaying = ref(false);
-const currentlyPlayingIndex = ref(null);
+const totalBeats = computed(() => {
+  const progressionDuration = displayedProgression.value.reduce(
+    (sum, chord) => sum + chord.duration,
+    0
+  );
+  const beatsInMeasureVal = beatsPerMeasure.value;
+  if (progressionDuration === 0) return beatsInMeasureVal;
+  if (progressionDuration % beatsInMeasureVal === 0)
+    return progressionDuration + 1;
+  return Math.ceil(progressionDuration / beatsInMeasureVal) * beatsInMeasureVal;
+});
 
-const playEntireProgression = async () => {
-  if (isPlaying.value) return;
+function updateProgressionItem(index, newItem) {
+  const newProgression = [...localProgression.value];
+  newProgression[index] = newItem;
+  localProgression.value = newProgression;
+}
 
-  if (Tone.getContext().state !== "running") {
-    await Tone.start();
+const parseChordString = (chordStr) => {
+  if (!chordStr) return null;
+  const rootMatch = chordStr.match(/^[A-G][#b]?/);
+  if (!rootMatch) return null;
+  const root = rootMatch[0];
+  const quality = chordStr.substring(root.length);
+  return { root, quality, inversion: 0 };
+};
+
+const startAnimation = () => {
+  playheadPosition.value = 0;
+  const playbackStartTime = Tone.now() * 1000;
+
+  const animatePlayhead = () => {
+    if (!isPlaying.value) return;
+    const elapsedTimeMs = Tone.now() * 1000 - playbackStartTime;
+    const elapsedBeats = elapsedTimeMs / tempoStore.beatDurationMs;
+    playheadPosition.value = elapsedBeats * BEAT_WIDTH;
+    animationFrameId.value = requestAnimationFrame(animatePlayhead);
+  };
+
+  if (animationFrameId.value) cancelAnimationFrame(animationFrameId.value);
+  animatePlayhead();
+};
+
+const stopPlaybackAndAnimation = () => {
+  if (animationFrameId.value) {
+    cancelAnimationFrame(animationFrameId.value);
+    animationFrameId.value = null;
   }
+  playheadPosition.value = 0;
+  props.piano.releaseAll();
+};
 
-  isPlaying.value = true;
+const handlePlayItemAnalysis = async ({ item }) => {
+  if (!item.chord) return;
 
-  try {
-    for (const [index, item] of displayedProgression.value.entries()) {
-      if (!isPlaying.value) break;
-      if (!item.chord) continue;
+  const mainChordObject = parseChordString(item.chord);
+  let chordDurationMs = item.duration * tempoStore.beatDurationMs;
 
-      currentlyPlayingIndex.value = index;
-
-      const parseChordString = (chordStr) => {
-        const rootMatch = chordStr.match(/^[A-G][#b]?/);
-        if (!rootMatch) return null;
-        const root = rootMatch[0];
-        const quality = chordStr.substring(root.length);
-        return {
-          root,
-          quality,
-          inversion: props.analysis.progression[index]?.inversion || 0,
-        };
-      };
-
-      if (showSecondaryDominants.value) {
-        const secondary = props.secondaryDominantsMap.get(item.chord);
-        if (secondary && secondary != "N/A") {
-          const secondaryChordObject = parseChordString(secondary);
-          if (secondaryChordObject) {
-            props.piano.play(secondaryChordObject);
-            await sleep(1000);
-          }
-        }
-      }
-
-      const mainChordObject = parseChordString(item.chord);
-      if (mainChordObject) {
-        props.piano.play(mainChordObject);
-        await sleep(1000);
+  if (showSecondaryDominants.value) {
+    const secondary = props.secondaryDominantsMap.get(item.chord);
+    if (secondary && secondary !== "N/A") {
+      const secondaryChordObject = parseChordString(secondary);
+      if (secondaryChordObject) {
+        const secondaryDurationMs = Math.min(
+          chordDurationMs,
+          tempoStore.beatDurationMs
+        );
+        props.piano.play(secondaryChordObject);
+        await sleep(secondaryDurationMs);
+        chordDurationMs -= secondaryDurationMs;
       }
     }
-  } catch (error) {
-    console.error("Error during playback:", error);
-  } finally {
-    isPlaying.value = false;
-    currentlyPlayingIndex.value = null;
+  }
+
+  if (mainChordObject && chordDurationMs > 0) {
+    props.piano.play(mainChordObject);
+    await sleep(chordDurationMs);
   }
 };
 
-function stopSound() {
-  isPlaying.value = false;
-  props.piano.releaseAll();
-  currentlyPlayingIndex.value = null;
-}
+const { isPlaying, currentlyPlayingIndex, play, stop } = useProgressionPlayer({
+  progression: displayedProgression,
+  tempoStore,
+  isLooping,
+  isMetronomeActive,
+  metronome,
+  onPlayItemAsync: handlePlayItemAnalysis,
+  onStart: startAnimation,
+  onStop: stopPlaybackAndAnimation,
+});
+
+const playEntireProgression = play;
+const stopSound = stop;
 </script>
 
 <style scoped>
+/* Les styles restent inchangés */
 .detailed-analysis-container {
   background-color: #3a3a3a;
   border-radius: 8px;
@@ -241,13 +380,13 @@ function stopSound() {
   border-bottom: 1px solid #4f4f4f;
   padding-bottom: 0.8rem;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .mode-selector-wrapper {
-  flex-grow: 1;
+  flex-shrink: 0;
   min-width: 180px;
 }
-
 .mode-selector {
   background-color: #4a4a4a;
   color: #edf2f4;
@@ -258,23 +397,14 @@ function stopSound() {
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  transition: border-color 0.2s;
 }
-
 .mode-selector:hover {
   border-color: #777;
 }
-
 .mode-selector:focus {
   outline: none;
   border-color: #6497cc;
 }
-
-.header-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
 .legend {
   display: flex;
   align-items: center;
@@ -282,20 +412,24 @@ function stopSound() {
   font-size: 13px;
   color: #bdc3c7;
   flex-shrink: 0;
+  flex-grow: 1;
 }
-
 .legend-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
-
 .legend-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
 }
-
+.right-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
 .control-icon-button {
   background-color: #4a4a4a;
   color: #edf2f4;
@@ -303,41 +437,111 @@ function stopSound() {
   border-radius: 50%;
   width: 40px;
   height: 40px;
-  padding: 0;
   cursor: pointer;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: all 0.2s ease;
 }
-
 .control-icon-button:hover:not(:disabled) {
   background-color: #5a5a5a;
   border-color: #777;
 }
-
+.control-icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .control-icon-button.is-active {
-  color: #000000;
   background-color: #6497cc;
+  color: #000;
+  border-color: #5078a0;
 }
-
-.analysis-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1.5rem;
-}
-
-.chord-progression-group {
+.time-signature-selector {
   display: flex;
-  justify-content: center;
   align-items: center;
-  border-radius: 12px;
-  transition: box-shadow 0.3s ease-in-out;
+  gap: 0.5rem;
+  background-color: #252525;
+  border-radius: 8px;
+  padding: 5px;
+  border: 1px solid #444;
+  color: #bbb;
+}
+.radio-label-sm {
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #bbb;
+  background-color: transparent;
+  font-size: 0.9rem;
+}
+.radio-label-sm.active {
+  background-color: #5a5a5a;
+  color: white;
+  font-weight: 500;
+}
+.radio-label-sm:not(.active):hover {
+  background-color: #3f3f3f;
+}
+.radio-label-sm input[type="radio"] {
+  display: none;
 }
 
-.chord-progression-group.is-playing-halo {
+.progression-grid-container {
+  overflow-x: auto;
+  padding: 5px;
+  background-color: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 8px;
+}
+
+.rhythm-timeline {
+  display: grid;
+  grid-template-columns: repeat(var(--total-beats, 8), var(--beat-width));
+  height: 30px;
+  position: relative;
+  border-bottom: 1px solid #555;
+  margin-bottom: 10px;
+}
+
+.rhythm-timeline .beat-marker {
+  height: 100%;
+  width: 1px;
+  background-color: rgba(255, 255, 255, 0.2);
+  justify-self: start;
+  position: relative;
+}
+
+.rhythm-timeline .beat-marker.measure-start {
+  width: 2px;
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
+.measure-number {
+  position: absolute;
+  top: -2px;
+  left: 4px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.chords-track {
+  display: grid;
+  grid-template-columns: repeat(var(--total-beats, 8), var(--beat-width));
+  grid-auto-rows: minmax(100px, auto);
+  align-items: stretch;
+}
+
+.chord-wrapper {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.3s ease-in-out;
+  border-radius: 12px;
+}
+
+.chord-wrapper.is-playing-halo {
   box-shadow: 0 0 20px 5px rgba(253, 203, 110, 0.7);
 }
 </style>

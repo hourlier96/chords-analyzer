@@ -1,268 +1,246 @@
 <template>
-  <div class="analysis-card-container">
+  <div class="analysis-card">
     <PlayButton
       v-if="item.chord !== 'N/A'"
       :chord="extractChordComponents(item)"
       :piano="piano"
+      class="play-button-corner"
     />
+
     <div
       v-if="showSecondaryDominant && secondaryDominantChord != 'N/A'"
-      class="docked-secondary-dominant"
+      class="secondary-dominant-badge"
     >
-      <div class="chord-name">{{ secondaryDominantChord }}</div>
+      V/ → {{ secondaryDominantChord }}
     </div>
-    <div class="card-inner" :class="{ 'is-flipped': isFlipped }">
-      <div class="analysis-card card-front">
-        <div class="card-content">
-          <div class="chord-name">{{ item.chord }}</div>
-          <div class="found-numeral" :class="getChordClass(item)">
-            {{ item.found_numeral ? item.found_numeral : "" }}
-            <v-tooltip v-if="borrowedInfo && !isSubstitution" location="right">
-              <template #activator="{ props: tooltipProps }">
-                <v-icon
-                  v-bind="tooltipProps"
-                  :icon="mdiInformation"
-                  size="x-small"
-                ></v-icon>
-              </template>
-              <div class="borrowed-info-tooltip">
-                <div v-for="(borrowed, idx) in borrowedInfo" :key="idx">
-                  {{ analysis.result.tonic }}
-                  {{ borrowed }}
-                </div>
-              </div>
-            </v-tooltip>
+
+    <div class="card-content">
+      <div class="chord-name">{{ item.chord }}</div>
+
+      <div class="numeral-display">
+        <span class="found-numeral" :class="getChordClass(item)">
+          {{ item.found_numeral ? item.found_numeral : " " }}
+        </span>
+        <v-tooltip
+          v-if="borrowedInfo && !isSubstitution"
+          location="right"
+          max-width="300px"
+        >
+          <template #activator="{ props: tooltipProps }">
+            <v-icon
+              v-bind="tooltipProps"
+              :icon="mdiInformation"
+              size="x-small"
+              class="info-icon"
+            ></v-icon>
+          </template>
+          <div class="borrowed-info-tooltip">
+            <div v-for="(borrowed, idx) in borrowedInfo" :key="idx">
+              {{ analysis.result.tonic }}
+              {{ borrowed }}
+            </div>
           </div>
-        </div>
+        </v-tooltip>
       </div>
     </div>
+
+    <div class="resize-handle" @mousedown.prevent="startResize"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed } from "vue"; // ref a été ajouté
 import { mdiInformation } from "@mdi/js";
-
-import { piano } from "@/sampler.js";
 import PlayButton from "@/components/common/PlayButton.vue";
 
 const props = defineProps({
-  item: {
-    type: Object,
-    required: true,
-  },
-  analysis: {
-    type: Object,
-    required: true,
-  },
-  currentIndex: {
-    type: Number,
-    required: true,
-  },
-  showSecondaryDominant: {
-    type: Boolean,
-    required: true,
-  },
-  secondaryDominantChord: {
-    type: String,
-    default: null,
-  },
-  isSubstitution: {
-    type: Boolean,
-    default: false,
-  },
+  item: { type: Object, required: true },
+  analysis: { type: Object, required: true },
+  piano: { type: Object, required: true },
+  showSecondaryDominant: { type: Boolean, required: true },
+  secondaryDominantChord: { type: String, default: null },
+  isSubstitution: { type: Boolean, default: false },
+  // NOUVEAU : Prop essentielle pour le calcul de la largeur
+  beatWidth: { type: Number, required: true },
 });
 
-const isFlipped = ref(false);
+// NOUVEAU : Événement pour mettre à jour l'objet 'item' dans le parent
+const emit = defineEmits(["update:item"]);
 
+// --- Le reste du script existant reste inchangé ---
 const borrowedInfo = computed(() => {
   return props.analysis.result.borrowed_chords?.[props.item.chord];
 });
 
 function extractChordComponents(data) {
   const chord = data.chord || "";
-
-  // Regex pour extraire la tonique (A-G avec # ou b) + qualité
   const match = chord.match(/^([A-G][b#]?)(.*)$/);
-  if (!match) {
-    return { root: null, quality: null };
-  }
-
+  if (!match) return { root: null, quality: null };
   const [, root, quality] = match;
   return { root, quality };
 }
 
 function getChordClass(item) {
+  const isBorrowed = !item.is_diatonic && borrowedInfo.value;
+  const isForeign = !item.is_diatonic && !borrowedInfo.value;
   return {
-    // Un accord d'emprunt est un accord non-diatonique pour lequel l'analyseur
-    // a trouvé une correspondance attendue dans le mode parallèle.
-    borrowed_chord: !item.is_diatonic && borrowedInfo,
+    borrowed_chord: isBorrowed,
+    foreign_chord: isForeign,
     substitution_chord: props.isSubstitution,
   };
+}
+
+// Refs pour suivre l'état du redimensionnement
+const initialMouseX = ref(0);
+const initialDuration = ref(0);
+
+/**
+ * Démarre le processus de redimensionnement au clic sur la poignée.
+ */
+function startResize(event) {
+  initialMouseX.value = event.clientX;
+  // Lit la durée initiale depuis la prop 'item'
+  initialDuration.value = props.item.duration || 4;
+
+  window.addEventListener("mousemove", doResize);
+  window.addEventListener("mouseup", stopResize);
+}
+
+/**
+ * Calcule et applique le redimensionnement pendant le mouvement de la souris.
+ */
+function doResize(event) {
+  console.log(props.item.duration);
+  const deltaX = event.clientX - initialMouseX.value;
+  const durationChange = Math.round(deltaX / props.beatWidth);
+
+  let newDuration = initialDuration.value + durationChange;
+  // S'assure que la durée est au moins de 1 temps
+  newDuration = Math.max(1, newDuration);
+
+  // Émet un événement seulement si la durée a changé
+  if (newDuration !== props.item.duration) {
+    emit("update:item", {
+      ...props.item,
+      duration: newDuration,
+    });
+  }
+}
+
+/**
+ * Termine le processus de redimensionnement et nettoie les écouteurs.
+ */
+function stopResize() {
+  window.removeEventListener("mousemove", doResize);
+  window.removeEventListener("mouseup", stopResize);
 }
 </script>
 
 <style scoped>
-.analysis-card-container {
+.analysis-card {
   position: relative;
-  background-color: transparent;
-  min-width: 140px;
-  height: 180px;
-  perspective: 1000px;
-  flex: 1;
+  box-sizing: border-box;
+  transition: width 0.1s ease-out;
+  width: 100%;
 }
 
-.docked-secondary-dominant {
-  position: absolute;
-  z-index: 10;
+.card-content {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 2px solid #555;
+  background-color: #3c3c3c;
+  color: white;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  box-sizing: border-box;
-  min-width: 70px;
-  height: 30px;
-  padding: 0.5rem;
-  border-radius: 6px;
-  background-color: #4f3b78;
-  border: 2px solid #7a5ba9;
-  color: #e6dff2;
   text-align: center;
-  box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
-}
-
-.docked-secondary-dominant .chord-name {
-  font-size: 1.3rem;
-  font-weight: bold;
-}
-
-.card-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  text-align: center;
-  transition: transform 0.6s;
-  transform-style: preserve-3d;
-}
-
-.analysis-card-container .is-flipped {
-  transform: rotateY(180deg);
-}
-
-.analysis-card {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  backface-visibility: hidden;
-  border: 2px solid #555;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  box-sizing: border-box;
-  background-color: #4a4a4a;
-  border-radius: 6px;
   transition: all 0.2s;
 }
 
-.analysis-card .card-content {
+.analysis-card:hover .card-content {
+  border-color: #777;
+}
+
+.chord-name {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.numeral-display {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  flex-grow: 1;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  min-height: 2rem;
 }
 
-.analysis-card .chord-name {
-  font-size: 1.8rem;
-}
-
-.analysis-card .found-numeral {
+.found-numeral {
   font-family: "Courier New", Courier, monospace;
-  font-size: 1.8rem;
+  font-size: 1rem;
   font-weight: bold;
-  color: #00b143;
-  margin: 0.5rem 0;
+  color: #2ecc71;
 }
 
-.analysis-card .borrowed_chord {
-  color: #fdcb6e;
-}
-.analysis-card .foreign_chord {
-  color: rgb(255, 95, 95) !important;
-}
-.analysis-card .substitution_chord {
-  color: rgb(205 205 205) !important;
+.info-icon {
+  color: #aaa;
+  cursor: help;
 }
 
-.analysis-card.is-swapped {
-  border-color: #fdcb6e;
-  box-shadow: 0 0 10px rgba(253, 203, 110, 0.5);
+.found-numeral.borrowed_chord {
+  color: #f1c40f;
+}
+.found-numeral.foreign_chord {
+  color: #e74c3c;
+}
+.found-numeral.substitution_chord {
+  color: #bdc3c7;
 }
 
-.card-back {
-  background-color: #3d5a80;
-  border-color: #98c1d9;
-  transform: rotateY(180deg);
-}
-
-.expected-chord-name {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #a0cfff;
-  margin: 0.5rem 0;
-}
-
-.expected-numeral {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #a0cfff;
-  margin: 0.5rem 0;
-}
-
-.flip-button {
+.secondary-dominant-badge {
   position: absolute;
-  top: 5px;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 24px;
-  transition: background-color 0.2s;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 0.2rem 0.8rem;
+  border-radius: 1rem;
+  background-color: #4f3b78;
+  border: 1px solid #7a5ba9;
+  color: #e6dff2;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
-.flip-button:hover,
-.mode-swap-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.flip-button {
-  right: 5px;
-}
-
-.mode-swap-button {
-  left: 5px;
+.play-button-corner {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 5;
 }
 
 .borrowed-info-tooltip {
-  max-width: 250px;
-  white-space: normal;
-  text-align: left;
-  padding: 8px;
-  color: #fdcb6e;
+  font-size: 10px;
 }
 
-.borrowed-info-tooltip div {
-  margin-bottom: 4px;
+/* NOUVEAU : Style pour la poignée de redimensionnement (copié de ChordSlot) */
+.resize-handle {
+  position: absolute;
+  right: 1px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize; /* Curseur indiquant un redimensionnement horizontal */
+  z-index: 5;
+  border-radius: 5px;
+  border-right: 1px solid #ffffff;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.resize-handle:hover {
+  opacity: 1;
 }
 </style>
