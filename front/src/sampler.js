@@ -66,25 +66,21 @@ function noteToMidi(note) {
 export function getNotesForChord(chord, previousNotes = null) {
   const intervals = CHORD_FORMULAS[chord.quality];
   if (!intervals) return [];
-  let rootIndex = NOTES_FLAT.indexOf(chord.root);
 
-  // Si non trouvé, essayer la forme enharmonique
+  let rootIndex = NOTES_FLAT.indexOf(chord.root);
   if (rootIndex === -1 && ENHARMONIC_EQUIVALENTS[chord.root]) {
     const enharmonic = ENHARMONIC_EQUIVALENTS[chord.root];
     rootIndex = NOTES_FLAT.indexOf(enharmonic);
   }
-
   if (rootIndex === -1) return [];
 
   let baseOctave;
-
   if (!previousNotes || previousNotes.length === 0) {
     baseOctave = 3;
   } else {
     const previousRootMidi = noteToMidi(previousNotes[0]);
     let bestOctave = -1;
     let minDistance = Infinity;
-
     for (let octave = 2; octave <= 5; octave++) {
       const currentRootMidi = octave * 12 + rootIndex;
       const distance = Math.abs(currentRootMidi - previousRootMidi);
@@ -103,15 +99,29 @@ export function getNotesForChord(chord, previousNotes = null) {
   });
 
   const inversion = chord.inversion || 0;
-  if (inversion > 0 && inversion < notes.length) {
-    for (let i = 0; i < inversion; i++) {
-      if (notes[i]) notes[i].octave += 1;
+  const numNotes = notes.length;
+
+  if (numNotes > 0) {
+    // Calcule le décalage d'octave global pour l'accord entier.
+    // Ex: pour un accord de 3 notes, inversion 3 -> décalage de +1 octave.
+    const octaveShift = Math.floor(inversion / numNotes);
+
+    // Calcule le renversement structurel (ex: 0, 1, ou 2 pour un accord de 3 notes).
+    // Gère correctement les valeurs positives et négatives.
+    const effectiveInversion = ((inversion % numNotes) + numNotes) % numNotes;
+
+    // Applique le renversement en montant d'une octave les premières notes.
+    for (let i = 0; i < effectiveInversion; i++) {
+      if (notes[i]) {
+        notes[i].octave += 1;
+      }
     }
-  } else if (inversion < 0 && Math.abs(inversion) < notes.length) {
-    const numToDrop = Math.abs(inversion);
-    for (let i = 0; i < numToDrop; i++) {
-      const noteIndex = notes.length - 1 - i;
-      if (notes[noteIndex]) notes[noteIndex].octave -= 1;
+
+    // Applique le décalage d'octave global à toutes les notes.
+    if (octaveShift !== 0) {
+      notes.forEach((note) => {
+        note.octave += octaveShift;
+      });
     }
   }
 

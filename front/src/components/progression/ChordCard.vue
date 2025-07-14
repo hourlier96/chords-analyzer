@@ -73,19 +73,11 @@
               </div>
             </div>
             <div class="inversion-control-footer">
-              <button
-                @click="changeInversion(-1)"
-                class="inversion-button"
-                :disabled="chord.inversion === 0"
-              >
+              <button @click="changeInversion(-1)" class="inversion-button">
                 -
               </button>
               <span>Position {{ chord.inversion + 1 }}</span>
-              <button
-                @click="changeInversion(1)"
-                class="inversion-button"
-                :disabled="chord.inversion === 3"
-              >
+              <button @click="changeInversion(1)" class="inversion-button">
                 +
               </button>
             </div>
@@ -108,6 +100,7 @@ import { ref, computed, watch, nextTick } from "vue";
 import { QUALITIES, NOTES } from "@/constants.js";
 import { getNotesForChord } from "@/sampler.js";
 import { useSettingsStore } from "@/stores/settings.js";
+import { ALL_PLAYABLE_NOTES } from "@/keyboard.js";
 
 const settingsStore = useSettingsStore();
 
@@ -135,7 +128,6 @@ const chord = computed({
   },
 });
 
-// --- Le reste de votre script existant reste inchangé ---
 const activeQualityCategory = ref(null);
 const chordDisplayName = computed(() => {
   return `${chord.value.root}${chord.value.quality}`;
@@ -198,13 +190,36 @@ watch(
 function isNoteActive(note) {
   return chord.value.root === getNoteValue(note);
 }
+
+const normalizeNote = (note) => {
+  const noteMap = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
+  const octave = note.slice(-1);
+  const root = note.slice(0, -1);
+  const mappedRoot = noteMap[root] || root;
+  return mappedRoot + octave;
+};
+
 function changeInversion(direction) {
-  const noteCount = getNotesForChord(chord.value).length;
-  const maxInversion = noteCount > 0 ? noteCount - 1 : 0;
-  const currentInversion = chord.value.inversion || 0;
+  const currentInversion = props.modelValue.inversion || 0;
   const newInversion = currentInversion + direction;
-  if (newInversion >= 0 && newInversion <= maxInversion) {
-    updateChord("inversion", newInversion);
+
+  const testChord = { ...props.modelValue, inversion: newInversion };
+  const notes = getNotesForChord(testChord);
+
+  if (!notes || notes.length === 0) return;
+
+  // Valider en utilisant la liste des notes du clavier
+  const areNotesInRange = notes.every((note) => {
+    const normalized = normalizeNote(note);
+    return ALL_PLAYABLE_NOTES.includes(normalized);
+  });
+
+  if (areNotesInRange) {
+    emit("update:modelValue", testChord);
+  } else {
+    console.warn(
+      `Le renversement ${newInversion} produit des notes hors de la tessiture du clavier.`
+    );
   }
 }
 function updateChord(key, value) {

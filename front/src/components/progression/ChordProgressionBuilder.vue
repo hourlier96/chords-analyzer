@@ -356,6 +356,7 @@ function processQuickImport() {
     .filter((str) => str)
     .map(parseChordString)
     .filter((chord) => chord);
+  console.log(newChords);
   if (newChords.length > 0) {
     progression.value = [...progression.value, ...newChords];
   }
