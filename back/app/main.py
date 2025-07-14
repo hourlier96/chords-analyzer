@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.modal_substitution.generator import get_degrees_to_borrow, get_substitutions
+from app.modal_substitution.generator import get_substitution_info, get_substitutions
 from app.schema import ChordItem, ProgressionRequest
 from app.secondary_dominant.generator import get_secondary_dominant_for_target
 from app.tritone_substitution.generator import get_tritone_substitute
@@ -40,7 +40,7 @@ def get_all_substitutions(request: ProgressionRequest):
     try:
         # Find tonic with IA
         tonic, mode, explanations = detect_tonic_and_mode(progression, model)
-        # tonic, mode, explanations = "D", "Harmonic Minor", "blabla"  # Mocked for testing
+        # tonic, mode, explanations = "C", "Harmonic Minor", "blabla"  # Mocked for testing
         detected_tonic_index: int = get_note_index(tonic)
 
         # Find "foreign" chords from detected mode
@@ -58,7 +58,7 @@ def get_all_substitutions(request: ProgressionRequest):
         borrowed_chords = get_borrowed_chords(quality_analysis, tonic_name, mode)
 
         # Get degrees to borrow
-        degrees_to_borrow: List[int | None] = get_degrees_to_borrow(quality_analysis)
+        degrees_to_borrow: List[Dict[str, Any] | None] = get_substitution_info(quality_analysis)
 
         # Get major modes substitutions from degrees
         substitutions: Dict[str, Dict[str, Any]] = {}

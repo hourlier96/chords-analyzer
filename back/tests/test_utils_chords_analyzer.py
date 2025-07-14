@@ -15,6 +15,7 @@ def test_analyze_diatonic_major_triad():
         "expected_quality": "maj7",
         "expected_chord_name": "Fmaj7",
         "is_diatonic": True,
+        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -32,6 +33,7 @@ def test_analyze_diatonic_minor7_chord():
         "expected_quality": "m7",
         "expected_chord_name": "Dm7",
         "is_diatonic": True,
+        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -49,6 +51,7 @@ def test_analyze_diatonic_half_diminished_chord():
         "expected_quality": "m7b5",
         "expected_chord_name": "Bm7b5",
         "is_diatonic": True,
+        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -70,6 +73,7 @@ def test_analyze_secondary_dominant():
         "expected_quality": "m7",
         "expected_chord_name": "Dm7",
         "is_diatonic": False,  # Non diatonique car il contient un F#
+        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -84,6 +88,7 @@ def test_analyze_neapolitan_chord():
         "expected_quality": "m(maj7)",
         "expected_chord_name": "Dbm(maj7)",
         "is_diatonic": False,
+        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -98,6 +103,7 @@ def test_analyze_v7_in_minor_key_borrowing_from_major():
         "expected_quality": "7",  # La qualité attendue de l'emprunt
         "expected_chord_name": "E7",
         "is_diatonic": False,  # Non diatonique à La éolien car il contient un G#
+        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -115,5 +121,6 @@ def test_analyze_borrowed_chord_from_parallel_minor():
         "expected_quality": "m7",
         "expected_chord_name": "Ebm7",  # Nom correct avec enharmonie
         "is_diatonic": False,  # Non diatonique
+        "substitution_skipped": False,
     }
     assert result == expected

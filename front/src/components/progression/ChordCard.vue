@@ -16,7 +16,12 @@
 
     <button class="remove-button" @click="$emit('remove')">×</button>
     <Teleport to="body">
-      <div v-if="isEditing" class="editor-popover" :style="popoverStyle">
+      <div
+        v-if="isEditing"
+        ref="editorPopoverRef"
+        class="editor-popover"
+        :style="popoverStyle"
+      >
         <div class="editor-content">
           <div class="root-note-selector">
             <template v-for="note in NOTES" :key="note">
@@ -119,6 +124,7 @@ const emit = defineEmits([
   "stop-editing",
 ]);
 
+const editorPopoverRef = ref(null);
 const chordSlotRef = ref(null);
 const popoverStyle = ref(null);
 
@@ -144,14 +150,38 @@ watch(
   (isEditing) => {
     if (isEditing) {
       nextTick(() => {
-        if (!chordSlotRef.value) return;
-        const rect = chordSlotRef.value.getBoundingClientRect();
+        if (!chordSlotRef.value || !editorPopoverRef.value) return;
+
+        const triggerRect = chordSlotRef.value.getBoundingClientRect();
+        const popoverRect = editorPopoverRef.value.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 10;
+
+        let finalTop = triggerRect.bottom + margin;
+
+        if (finalTop + popoverRect.height > viewportHeight - margin) {
+          finalTop = triggerRect.top - popoverRect.height - margin;
+        }
+
+        let finalLeft = triggerRect.left + triggerRect.width / 2;
+        const popoverHalfWidth = popoverRect.width / 2;
+
+        if (finalLeft + popoverHalfWidth > viewportWidth - margin) {
+          finalLeft = viewportWidth - popoverHalfWidth - margin;
+        }
+
+        if (finalLeft - popoverHalfWidth < margin) {
+          finalLeft = popoverHalfWidth + margin;
+        }
+
         popoverStyle.value = {
           position: "absolute",
-          top: `${rect.bottom + window.scrollY + 10}px`,
-          left: `${rect.left + window.scrollX + rect.width / 2}px`,
+          top: `${finalTop + window.scrollY}px`,
+          left: `${finalLeft + window.scrollX}px`,
         };
       });
+
       let foundCategory = null;
       if (chord.value.quality) {
         for (const group of QUALITIES) {
@@ -162,11 +192,8 @@ watch(
         }
       }
       activeQualityCategory.value = foundCategory || "Majeurs";
-    } else {
-      activeQualityCategory.value = null;
     }
-  },
-  { immediate: true }
+  }
 );
 function isNoteActive(note) {
   return chord.value.root === getNoteValue(note);
@@ -350,10 +377,9 @@ function stopResize() {
 }
 .category-tabs {
   display: flex;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 6px 0;
   padding-bottom: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: #888 #4a4a4a;
 }
 .category-tabs::-webkit-scrollbar {
   height: 4px;

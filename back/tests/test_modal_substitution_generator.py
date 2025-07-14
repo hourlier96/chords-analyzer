@@ -1,125 +1,130 @@
 import pytest
 
-from app.modal_substitution.generator import get_degrees_to_borrow, get_substitutions
+from app.modal_substitution.generator import (
+    get_substitution_info,
+    get_substitutions,
+)
 
 
-class TestGetDegreesToBorrow:
+class TestGetSubstitutionInfo:
+    """
+    Tests pour la nouvelle fonction `get_substitution_info`.
+    """
+
     def test_empty_list(self):
         """Vérifie qu'une liste vide en entrée retourne une liste vide."""
-        assert get_degrees_to_borrow([]) == []
+        assert get_substitution_info([]) == []
 
     @pytest.mark.parametrize(
         "analysis, expected",
         [
+            # Cas 1: Mix de triades et d'accords de 7e
             (
                 [
-                    {"found_numeral": "Imaj7"},
-                    {"found_numeral": "V7"},
-                    {"found_numeral": "vi-7"},
+                    {"found_numeral": "Imaj7", "found_quality": "maj7"},  # Accord de 7e
+                    {"found_numeral": "V", "found_quality": ""},  # Triade
+                    {"found_numeral": "vim", "found_quality": "m"},  # Triade
                 ],
-                [1, 5, 6],
+                [
+                    {"degree": 1, "is_triad": False},
+                    {"degree": 5, "is_triad": True},
+                    {"degree": 6, "is_triad": True},
+                ],
             ),
-            ([{"found_numeral": "(V7/V)"}, {"found_numeral": "ii-7"}], [None, 2]),
-            ([{}, {"found_numeral": ""}], [None, None]),
+            # Cas 2: Accords non-substituables (chromatiques/secondaires)
             (
                 [
-                    {"found_numeral": "IVmaj7"},
-                    {"found_numeral": "(iii-7)"},
-                    {"found_numeral": "V7"},
+                    {"found_numeral": "(V7/V)", "found_quality": "7"},
+                    {"found_numeral": "iim7", "found_quality": "m7"},
                 ],
-                [4, None, 5],
+                [None, {"degree": 2, "is_triad": False}],
             ),
-            ([{"found_numeral": "VIII"}], [None]),
+            # Cas 3: Entrées vides ou invalides
+            (
+                [
+                    {},
+                    {"found_numeral": ""},
+                    {"found_numeral": "VIII", "found_quality": "M"},  # Chiffrage invalide
+                ],
+                [None, None, None],
+            ),
         ],
     )
     def test_various_cases(self, analysis, expected):
-        """Teste plusieurs scénarios de conversion de chiffrages en degrés."""
-        assert get_degrees_to_borrow(analysis) == expected
+        """Teste plusieurs scénarios de conversion de chiffrages en informations de substitution."""
+        # On simule la présence de la constante globale dans la fonction testée
+        # En pratique, elle serait importée directement dans le module.
+        assert get_substitution_info(analysis) == expected
+
+
+# --- Tests pour get_substitutions ---
 
 
 class TestGetSubstitutions:
-    def test_basic_substitution_ionian(self):
+    """
+    Tests pour la fonction `get_substitutions` mise à jour.
+    """
+
+    def test_mixed_triad_and_seventh_substitution(self):
         """
-        Teste une substitution en Do Ionien.
+        Teste une substitution qui doit générer à la fois des triades et des accords de 7e.
+        Substitution en Do Ionien (Majeur), tonique_index = 0.
         """
-        base_prog = [{}, {}, {}]
-        degrees = [2, 5, 1]
-        result = get_substitutions(base_prog, 0, degrees)  # Tonique = C
+        progression = ["Dm", "G7", "C"]
+        sub_info = [
+            {"degree": 4, "is_triad": True},  # Doit générer F (triade)
+            {"degree": 2, "is_triad": False},  # Doit générer Dm7 (7e)
+            {"degree": 6, "is_triad": True},  # Doit générer Am (triade)
+        ]
+        result = get_substitutions(progression, 0, sub_info)
 
         expected = [
+            {"chord": "F", "roman": "IV", "quality": ""},
             {"chord": "Dm7", "roman": "ii", "quality": "m7"},
-            {"chord": "G7", "roman": "V", "quality": "7"},
-            {"chord": "Cmaj7", "roman": "I", "quality": "maj7"},
+            {"chord": "Am", "roman": "vi", "quality": "m"},
         ]
         assert result == expected
 
-    def test_substitution_with_none_in_d_major(self):
+    def test_substitution_with_skipped_chord(self):
         """
-        Teste une substitution en Ré, en supposant le mode Ionien (Majeur) par défaut.
+        Teste une substitution en Ré Majeur où un accord est ignoré (`None`).
+        L'accord ignoré doit conserver son nom d'origine.
         """
-        base_prog = [{}, {}]
-        degrees = [4, None]
-        result = get_substitutions(base_prog, 2, degrees)  # Tonique = D
+        progression = ["Gmaj7", "A7"]
+        sub_info = [
+            {"degree": 6, "is_triad": False},  # Doit générer Bm7
+            None,  # Doit être ignoré
+        ]
+        result = get_substitutions(progression, 2, sub_info)  # Tonique = D
 
         expected = [
-            # Le IVème degré de Ré Majeur est Sol majeur 7 (Gmaj7).
-            {"chord": "Gmaj7", "roman": "IV", "quality": "maj7"},
-            {"chord": "N/A", "roman": None, "quality": None},
+            # Le VIe degré de Ré Majeur est Si mineur 7 (Bm7).
+            {"chord": "Bm7", "roman": "vi", "quality": "m7"},
+            # L'accord ignoré reprend les infos de la progression originale.
+            {"chord": "A7", "roman": None, "quality": None, "substitution_skipped": True},
         ]
         assert result == expected
 
-    def test_cycling_of_borrowed_chords_in_g_major(self):
+    def test_empty_substitution_info(self):
         """
-        Vérifie que la liste de substitution se répète en Sol,
-        en supposant le mode Ionien (Majeur) par défaut.
+        Vérifie qu'une liste vide est retournée si la liste d'infos est vide.
         """
-        base_prog = [{}, {}, {}, {}]  # 4 accords
-        degrees = [6, 4]  # 2 substitutions
-        result = get_substitutions(base_prog, 7, degrees)  # Tonique = G
-
-        # Le VIème degré de Sol Majeur est Mi mineur 7 (Em7).
-        sub1 = {"chord": "Em7", "roman": "vi", "quality": "m7"}
-        # Le IVème degré de Sol Majeur est Do majeur 7 (Cmaj7).
-        sub2 = {"chord": "Cmaj7", "roman": "IV", "quality": "maj7"}
-
-        expected = [sub1, sub2, sub1, sub2]
+        progression = ["C", "G", "Am"]
+        expected = []
+        result = get_substitutions(progression, 0, [])
         assert result == expected
 
-    def test_empty_degrees_to_borrow(self):
+    def test_all_none_in_substitution_info(self):
         """
-        Vérifie que la progression de base est retournée si la liste de degrés est vide.
+        Vérifie le comportement si toutes les informations de substitution sont None.
+        La fonction doit retourner la progression originale.
         """
-        base_prog = ["C", "G", "Am"]
-        expected_result = [
-            {
-                "chord": "C",
-                "quality": None,
-                "roman": None,
-            },
-            {
-                "chord": "G",
-                "quality": None,
-                "roman": None,
-            },
-            {
-                "chord": "Am",
-                "quality": None,
-                "roman": None,
-            },
+        progression = ["Fm", "C7"]
+        sub_info = [None, None]
+        result = get_substitutions(progression, 0, sub_info)
+
+        expected = [
+            {"chord": "Fm", "roman": None, "quality": None, "substitution_skipped": True},
+            {"chord": "C7", "roman": None, "quality": None, "substitution_skipped": True},
         ]
-        degrees = []
-        result = get_substitutions(base_prog, 0, degrees)
-
-        assert result == expected_result
-
-    def test_all_none_degrees(self):
-        """
-        Vérifie le comportement si tous les degrés sont None.
-        """
-        base_prog = [{}, {}]
-        degrees = [None, None]
-        result = get_substitutions(base_prog, 0, degrees)
-
-        na_chord = {"chord": "N/A", "roman": None, "quality": None}
-        expected = [na_chord, na_chord]
         assert result == expected

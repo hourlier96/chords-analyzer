@@ -1,79 +1,134 @@
 import re
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from app.utils.chords_analyzer import QualityAnalysisItem
 from app.utils.common import (
     get_diatonic_7th_chord,
+    get_note_from_index,
 )
-from constants import MAJOR_MODES_DATA, ROMAN_DEGREES
+from constants import MAJOR_MODES_DATA, MODES_DATA, ROMAN_DEGREES
+
+TRIAD_QUALITIES = {"", "m", "dim", "aug", "sus2", "sus4"}
+
+SEVENTH_TO_TRIAD_MAP = {
+    "maj7": "",
+    "maj9": "",
+    "maj13": "",
+    "maj7#5": "aug",
+    "m7": "m",
+    "m9": "m",
+    "m11": "m",
+    "m(maj7)": "m",
+    "m6": "m",
+    "7": "",  # La triade d'un accord de 7e de dominante est majeure
+    "9": "",
+    "13": "",
+    "7b5": "dim",  # Souvent, la base est diminuée
+    "7#5": "aug",
+    "m7b5": "dim",
+    "dim7": "dim",
+    # Ajoutez d'autres correspondances si nécessaire
+}
 
 
-def get_degrees_to_borrow(quality_analysis: List[QualityAnalysisItem]) -> List[Optional[int]]:
+def get_diatonic_triad_chord(degree: int, tonic_index: int, mode_name: str) -> str:
     """
-    Prend le résultat de l'analyse détaillée et retourne une liste de degrés numériques (1-7)
-    pour les accords qui sont des candidats à la substitution.
+    Construit le nom d'un accord de triade diatonique pour un degré, une tonique et un mode donnés.
 
-    Les accords de tonique (I) et les accords non-diatoniques ne sont pas substituables
-    et seront représentés par `None`.
+    Args:
+        degree (int): Le degré de l'accord dans la gamme (1 à 7).
+        tonic_index (int): L'index de la note tonique (0-11).
+        mode_name (str): Le nom du mode (ex: "Ionian", "Aeolian").
+
+    Returns:
+        str: Le nom complet de l'accord de triade (ex: "Dm", "G", "Bdim").
     """
-    degrees_to_borrow: List[Optional[int]] = []
+    if mode_name not in MODES_DATA:
+        raise ValueError(f"Le mode '{mode_name}' n'est pas reconnu.")
+    if not 1 <= degree <= 7:
+        raise ValueError("Le degré doit être compris entre 1 et 7.")
+
+    # 1. Obtenir les données du mode
+    mode_intervals, mode_seventh_qualities, _ = MODES_DATA[mode_name]
+
+    # 2. Déterminer la fondamentale (root) de l'accord
+    # On soustrait 1 au degré car les listes sont indexées à partir de 0
+    interval = mode_intervals[degree - 1]
+    root_note_index = (tonic_index + interval) % 12
+    root_note_name = get_note_from_index(root_note_index)
+
+    # 3. Déterminer la qualité de la triade
+    # On récupère d'abord la qualité de 7e diatonique
+    seventh_quality = mode_seventh_qualities[degree - 1]
+    # Puis on la convertit en sa qualité de triade correspondante
+    triad_quality = SEVENTH_TO_TRIAD_MAP.get(seventh_quality, "M")  # "M" par défaut
+
+    # 4. Construire le nom de l'accord final
+    # Pour les accords majeurs, la qualité "M" est généralement omise.
+    if triad_quality == "M":
+        return root_note_name
+    else:
+        return root_note_name + triad_quality
+
+
+def get_substitution_info(
+    quality_analysis: List[QualityAnalysisItem],
+) -> List[Optional[Dict[str, Any]]]:
+    """
+    ## RENOMMÉE ET MODIFIÉE
+    Prend l'analyse et retourne une liste d'informations pour la substitution.
+
+    Pour chaque accord substituable, retourne un dictionnaire avec son degré
+    et un booléen `is_triad` indiquant si l'accord original était une triade.
+    Retourne `None` pour les accords non substituables.
+    """
+    substitution_info_list: List[Optional[Dict[str, Any]]] = []
 
     for analysis_item in quality_analysis:
         found_numeral = analysis_item.get("found_numeral", "")
+        found_quality = analysis_item.get("found_quality", "")
 
-        # Cas 2 : L'accord n'est pas diatonique (ex: "(G7)"). On ne le substitue pas.
+        # On ne substitue pas les accords non-diatoniques
         if not found_numeral or found_numeral.startswith("("):
-            degrees_to_borrow.append(None)
+            substitution_info_list.append(None)
             continue
 
-        # Cas 3 : C'est un accord diatonique non-tonique. On extrait son degré.
         match = re.match(r"^[ivxIVX]+", found_numeral)
         if match:
             base_numeral_str = match.group(0)
             try:
-                # On trouve l'index (0-6) et on ajoute 1 pour obtenir le degré (1-7)
                 degree_num = ROMAN_DEGREES.index(base_numeral_str.upper()) + 1
-                degrees_to_borrow.append(degree_num)
-            except ValueError:
-                # Sécurité si le chiffrage est inattendu
-                degrees_to_borrow.append(None)
-        else:
-            degrees_to_borrow.append(None)
 
-    return degrees_to_borrow
+                ## NOUVEAU : On vérifie si l'accord original est une triade
+                is_triad = found_quality in TRIAD_QUALITIES
+
+                substitution_info_list.append({"degree": degree_num, "is_triad": is_triad})
+            except ValueError:
+                substitution_info_list.append(None)
+        else:
+            substitution_info_list.append(None)
+
+    return substitution_info_list
 
 
 def get_substitutions(
     progression: List[str],
     relative_tonic_index: int,
-    degrees_to_borrow: List[Optional[int]],
+    substitution_info_list: List[Optional[Dict[str, Any]]],
     mode_name: str = "Ionian",
 ) -> List[dict]:
     """
-    Crée une liste d'accords de substitution à partir d'une liste de degrés, en les
-    enrichissant avec le chiffrage et la qualité de la gamme majeure relative du mode fournit.
-
-    Pour mode_name="Phrygian" : La variable relative_tonic_index pointera correctement vers G#.
-    Il construira donc les accords de la gamme de G# Majeur.
-
-    Args:
-        quality_analysis (list): L'analyse détaillée de la progression d'accords.
-        relative_tonic_index (int): L'index de la note tonique pour la substitution.
-        degrees_to_borrow (list): Une liste de degrés (1-7) ou `None`.
-
-    Returns:
-        list: Une liste de dictionnaires, chaque dictionnaire représentant un accord
-              substitué avec son nom, son degré, son chiffrage romain et sa qualité.
+    Crée une liste d'accords de substitution en se basant sur la nature (triade ou 7e)
+    de l'accord original.
     """
-    mode_qualities = MAJOR_MODES_DATA["Ionian"][1]
-    borrowed_chords: List[dict] = []
+    # Qualités des accords de 7e du mode majeur de référence
+    major_seventh_qualities = MAJOR_MODES_DATA["Ionian"][1]
+    substituted_chords: List[dict] = []
 
-    if not degrees_to_borrow:
-        return [{"chord": chord, "roman": None, "quality": None} for chord in progression]
-
-    for index, degree_index in enumerate(degrees_to_borrow):
-        if degree_index is None:
-            borrowed_chords.append(
+    for index, info in enumerate(substitution_info_list):
+        # Cas où l'accord n'est pas substituable
+        if info is None:
+            substituted_chords.append(
                 {
                     "chord": progression[index],
                     "roman": None,
@@ -83,24 +138,35 @@ def get_substitutions(
             )
             continue
 
-        roman_numeral = ROMAN_DEGREES[degree_index - 1]
-        quality = mode_qualities[degree_index - 1]
-        if (quality.startswith("m") and not quality.startswith("maj")) or "dim" in quality:
+        degree = info["degree"]
+        is_original_chord_triad = info["is_triad"]
+
+        # Qualité de 7e diatonique pour ce degré
+        seventh_quality = major_seventh_qualities[degree - 1]
+
+        if is_original_chord_triad:
+            # Si l'original est une triade, on substitue par une triade
+            expected_quality = SEVENTH_TO_TRIAD_MAP.get(seventh_quality, "")
+            # On suppose l'existence d'une fonction qui génère la triade diatonique
+            chord_name = get_diatonic_triad_chord(degree, relative_tonic_index, mode_name)
+        else:
+            # Sinon, on substitue par un accord de 7e
+            expected_quality = seventh_quality
+            chord_name = get_diatonic_7th_chord(degree, relative_tonic_index, mode_name)
+
+        # Formatage du chiffrage romain
+        roman_numeral = ROMAN_DEGREES[degree - 1]
+        if (
+            expected_quality.startswith("m") and not expected_quality.startswith("maj")
+        ) or "dim" in expected_quality:
             roman_numeral = roman_numeral.lower()
 
-        borrowed_chords.append(
+        substituted_chords.append(
             {
-                "chord": get_diatonic_7th_chord(degree_index, relative_tonic_index, mode_name),
+                "chord": chord_name,
                 "roman": roman_numeral,
-                "quality": quality,
+                "quality": expected_quality,
             }
         )
 
-    new_progression_chords: List[dict] = []
-
-    borrowed_idx = 0
-    for _ in progression:
-        new_progression_chords.append(borrowed_chords[borrowed_idx % len(borrowed_chords)])
-        borrowed_idx += 1
-
-    return new_progression_chords
+    return substituted_chords
