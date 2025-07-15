@@ -1,6 +1,3 @@
-- Automatiser la position des accords dans le contexte de l'accord
-(Cas particulier: si toutes les notes changent)
-
 - Terminer le panel de droite
 
 - Deux vues différentes: preset & vué avancée

@@ -133,6 +133,11 @@ export function getNotesForChord(chord, previousNotes = null) {
     .map((note) => `${note.name}${note.octave}`);
 }
 
+export function getNotesAsMidi(chord, previousNotes = null) {
+  const notesAsStrings = getNotesForChord(chord, previousNotes);
+  return notesAsStrings.map((noteStr) => noteToMidi(noteStr));
+}
+
 /**
  * Plays a chord (all notes together).
  * @param {object} chord - The chord object with { root, quality }.

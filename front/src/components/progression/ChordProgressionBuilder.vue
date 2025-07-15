@@ -204,7 +204,7 @@ import draggable from "vuedraggable";
 import { mdiKeyboard, mdiCheck, mdiClose, mdiPiano } from "@mdi/js";
 
 import { BEAT_WIDTH, useStatePlayer } from "@/composables/useStatePlayer.js";
-import { piano, getNotesForChord } from "@/sampler.js";
+import { piano, getNotesForChord, getNotesAsMidi } from "@/sampler.js";
 import { sleep } from "@/utils.js";
 import { useTempoStore } from "@/stores/tempo.js";
 import { useAnalysisStore } from "@/stores/analysis.js";
@@ -348,21 +348,120 @@ function removeAllChords() {
   selectedChordNotes.value = [];
 }
 
+/**
+ * Calcule le coût de transition
+ */
+function calculateMusicalCost(notesA, notesB, weights) {
+  if (notesA.length === 0 || notesB.length === 0) return Infinity;
+  const sortedA = [...notesA].sort((a, b) => a - b);
+  const sortedB = [...notesB].sort((a, b) => a - b);
+  const sopranoMove = Math.abs(
+    sortedA[sortedA.length - 1] - sortedB[sortedB.length - 1]
+  );
+  const sopranoCost = sopranoMove * weights.soprano;
+  const bassMove = Math.abs(sortedA[0] - sortedB[0]);
+  const bassCost = bassMove * weights.bass;
+  let overallDistance = 0;
+  const len = Math.min(sortedA.length, sortedB.length);
+  for (let i = 0; i < len; i++) {
+    overallDistance += Math.abs(sortedA[i] - sortedB[i]);
+  }
+  const overallCost = (overallDistance / len) * weights.overall;
+  return sopranoCost + bassCost + overallCost;
+}
+
+/**
+ * Traite une chaîne d'accords en choisissant le meilleur "voicing" (inversion/octave)
+ * en se basant sur le fonctionnement spécifique de getNotesAsMidi.
+ */
 function processQuickImport() {
   if (!quickImportText.value.trim()) return;
-  const newChords = quickImportText.value
+
+  const WEIGHTS = { soprano: 3.0, bass: 2.0, overall: 1.0 };
+  const REPEATED_BASS_PENALTY = 10;
+
+  const chordStrings = quickImportText.value
     .split(/[; -]/)
-    .map((str) => str.trim())
-    .filter((str) => str)
-    .map(parseChordString)
-    .filter((chord) => chord);
-  console.log(newChords);
+    .map((s) => s.trim())
+    .filter((s) => s);
+  if (chordStrings.length === 0) {
+    cancelQuickImport();
+    return;
+  }
+
+  const newChords = [];
+  let previousChordNotes =
+    progression.value.length > 0
+      ? getNotesAsMidi(progression.value[progression.value.length - 1])
+      : null;
+
+  for (const chordStr of chordStrings) {
+    const baseChord = parseChordString(chordStr);
+    if (!baseChord) continue;
+
+    if (!previousChordNotes) {
+      const firstChord = { ...baseChord };
+      // Inversion de base différente selon la note, pour "centrer"
+      if (["C", "C#", "D", "D#", "E"].includes(baseChord.root)) {
+        firstChord.inversion = 1;
+      } else {
+        firstChord.inversion = 0;
+      }
+
+      newChords.push(firstChord);
+      previousChordNotes = getNotesAsMidi(firstChord);
+      continue;
+    }
+
+    let bestInversion = 0;
+    let bestNotesForNextIteration = [];
+    let minCost = Infinity;
+
+    const rootPositionNotes = getNotesAsMidi({ ...baseChord, inversion: 0 });
+    // Le nombre d'inversions uniques par octave (3 pour une triade, 4 pour un accord 7).
+    const voicingsPerOctave = rootPositionNotes.length;
+
+    // On explore une large plage de "voicings" (inversions) sur plusieurs octaves.
+    // Par exemple, de -3 à +6 pour une triade, couvrant l'octave en dessous,
+    // l'octave de base et l'octave au-dessus.
+    const searchRangeStart = -voicingsPerOctave;
+    const searchRangeEnd = 2 * voicingsPerOctave;
+
+    for (let i = searchRangeStart; i < searchRangeEnd; i++) {
+      // On demande directement le voicing `i` à la fonction. Pas de décalage manuel.
+      const currentNotes = getNotesAsMidi({ ...baseChord, inversion: i });
+      if (!currentNotes || currentNotes.length === 0) continue;
+
+      let cost = calculateMusicalCost(
+        previousChordNotes,
+        currentNotes,
+        WEIGHTS
+      );
+
+      const previousBass = Math.min(...previousChordNotes);
+      const currentBass = Math.min(...currentNotes);
+      if (currentBass === previousBass) {
+        cost += REPEATED_BASS_PENALTY;
+      }
+
+      if (cost < minCost) {
+        minCost = cost;
+        bestInversion = i;
+        bestNotesForNextIteration = currentNotes;
+      }
+    }
+
+    const finalChord = { ...baseChord, inversion: bestInversion };
+    newChords.push(finalChord);
+    previousChordNotes = bestNotesForNextIteration;
+  }
+
   if (newChords.length > 0) {
     progression.value = [...progression.value, ...newChords];
   }
+
   cancelQuickImport();
 }
-
 function cancelQuickImport() {
   showQuickImport.value = false;
   quickImportText.value = "";
