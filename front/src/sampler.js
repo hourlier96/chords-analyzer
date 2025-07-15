@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import * as Tone from "tone";
+import { useTempoStore } from "@/stores/tempo.js";
 import {
   NOTES_FLAT,
   ENHARMONIC_EQUIVALENTS,
@@ -7,18 +8,18 @@ import {
 } from "@/constants.js";
 
 const compressor = new Tone.Compressor({
-  threshold: -12, // Le seuil à partir duquel la compression s'active
-  ratio: 4, // Le ratio de compression (4:1)
+  threshold: -12,
+  ratio: 4,
 }).toDestination();
 
 const eq = new Tone.EQ3({
-  low: -2, // Baisser un peu les basses pour éviter un son boueux
+  low: -2,
   mid: 0,
-  high: 2, // Augmenter les aigus pour plus de brillance
+  high: 2,
 });
 const reverb = new Tone.Reverb({
-  decay: 2.5, // La queue de la réverbération
-  wet: 0.3, // La quantité d'effet (0 à 1)
+  decay: 2.5,
+  wet: 0.3,
   preDelay: 0.01,
 }).toDestination();
 
@@ -151,19 +152,28 @@ piano.playChord = function (chord) {
 };
 
 /**
- * Plays a chord as an arpeggio.
- * @param {object} chord - The chord object with { root, quality }.
+ * Joue un accord en arpège en tenant compte du tempo.
+ * @param {string} chord - Le nom de l'accord à jouer.
  */
 piano.playArpeggio = function (chord) {
+  const tempoStore = useTempoStore();
   this.releaseAll();
   const notes = getNotesForChord(chord);
+
   if (notes.length > 0) {
     const now = Tone.now();
     const baseVelocity = 0.6;
     const velocityIncrement = 0.1;
+
+    const quarterNoteDuration = 60 / tempoStore.bpm; // Durée d'une noire en secondes
+    const arpeggioInterval = quarterNoteDuration / 4; // Intervalle entre chaque note (double-croche)
+    const noteDuration = quarterNoteDuration / 2; // Durée de chaque note jouée (croche)
+
     notes.forEach((note, index) => {
       const velocity = Math.min(1.0, baseVelocity + index * velocityIncrement);
-      this.triggerAttackRelease(note, "0.5s", now + index * 0.2, velocity);
+
+      const startTime = now + index * arpeggioInterval;
+      this.triggerAttackRelease(note, `${noteDuration}s`, startTime, velocity);
     });
   }
 };

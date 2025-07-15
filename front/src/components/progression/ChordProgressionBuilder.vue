@@ -79,13 +79,14 @@
         </v-tooltip>
       </div>
 
-      <div class="progression-grid-container">
+      <div class="progression-grid-container" @click="selectedChordIds.clear()">
         <TimelineGrid
           :total-beats="totalBeats"
           :beats-per-measure="beatsPerMeasure"
           :beat-width="BEAT_WIDTH"
           :is-playing="isPlaying"
           :playhead-position="playheadPosition"
+          @seek="handleSeek"
         />
 
         <div
@@ -108,7 +109,11 @@
                 :style="{
                   gridColumn: `${chord.start} / span ${chord.duration}`,
                 }"
-                :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
+                :class="{
+                  'is-playing-halo': index === currentlyPlayingIndex,
+                  'is-selected': selectedChordIds.has(chord.id),
+                }"
+                @click.stop="handleChordClick(chord, $event)"
               >
                 <ChordCard
                   :modelValue="chord"
@@ -199,7 +204,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import draggable from "vuedraggable";
 import { mdiKeyboard, mdiCheck, mdiClose, mdiPiano } from "@mdi/js";
 
@@ -231,12 +236,21 @@ const selectedChordNotes = ref([]);
 const showQuickImport = ref(false);
 const quickImportText = ref("");
 
-const playChordItem = async ({ item }) => {
+const selectedChordIds = ref(new Set());
+const clipboard = ref([]);
+
+const playChordItem = async ({ item, startOffsetBeats = 0 }) => {
   if (!item) return;
+
   piano.play(item);
   selectedChordNotes.value = getNotesForChord(item);
-  const chordDurationMs = item.duration * tempoStore.beatDurationMs;
-  await sleep(chordDurationMs);
+
+  const remainingDurationInBeats = item.duration - startOffsetBeats;
+  const chordDurationMs = remainingDurationInBeats * tempoStore.beatDurationMs;
+
+  if (chordDurationMs > 0) {
+    await sleep(chordDurationMs);
+  }
 };
 
 const progression = computed({
@@ -257,8 +271,10 @@ const {
   isLooping,
   playEntireProgression,
   stopSound,
+  seek,
 } = useStatePlayer(progression, {
   onPlayItemAsync: playChordItem,
+  piano,
 });
 
 const isProgressionUnchanged = computed(() => {
@@ -301,6 +317,7 @@ function addChord() {
 
 function removeChord(chordId) {
   progression.value = progression.value.filter((c) => c.id !== chordId);
+  selectedChordIds.value.delete(chordId);
   if (editingChordId.value === chordId) {
     stopEditing();
   }
@@ -346,6 +363,8 @@ function removeAllChords() {
   progression.value = [];
   stopEditing();
   selectedChordNotes.value = [];
+  selectedChordIds.value.clear();
+  clipboard.value = [];
 }
 
 /**
@@ -418,17 +437,12 @@ function processQuickImport() {
     let minCost = Infinity;
 
     const rootPositionNotes = getNotesAsMidi({ ...baseChord, inversion: 0 });
-    // Le nombre d'inversions uniques par octave (3 pour une triade, 4 pour un accord 7).
     const voicingsPerOctave = rootPositionNotes.length;
 
-    // On explore une large plage de "voicings" (inversions) sur plusieurs octaves.
-    // Par exemple, de -3 à +6 pour une triade, couvrant l'octave en dessous,
-    // l'octave de base et l'octave au-dessus.
     const searchRangeStart = -voicingsPerOctave;
     const searchRangeEnd = 2 * voicingsPerOctave;
 
     for (let i = searchRangeStart; i < searchRangeEnd; i++) {
-      // On demande directement le voicing `i` à la fonction. Pas de décalage manuel.
       const currentNotes = getNotesAsMidi({ ...baseChord, inversion: i });
       if (!currentNotes || currentNotes.length === 0) continue;
 
@@ -466,6 +480,105 @@ function cancelQuickImport() {
   showQuickImport.value = false;
   quickImportText.value = "";
 }
+
+/**
+ * Gère le déplacement de la tête de lecture.
+ * @param {number} targetBeat - Le temps (beat) où l'utilisateur a cliqué.
+ */
+async function handleSeek(targetBeat) {
+  const wasPlaying = isPlaying.value;
+
+  if (wasPlaying) {
+    await stopSound();
+    seek(targetBeat);
+    playEntireProgression();
+  } else {
+    seek(targetBeat);
+  }
+}
+
+// --- Copy/Paste Logic ---
+
+function handleChordClick(chord, event) {
+  if (event.ctrlKey || event.metaKey) {
+    if (selectedChordIds.value.has(chord.id)) {
+      selectedChordIds.value.delete(chord.id);
+    } else {
+      selectedChordIds.value.add(chord.id);
+    }
+  } else {
+    selectedChordIds.value.clear();
+    selectedChordIds.value.add(chord.id);
+  }
+}
+
+function copySelectedChords() {
+  if (selectedChordIds.value.size === 0) return;
+  // Copy in the order of appearance in the progression
+  const chordsToCopy = progression.value.filter((chord) =>
+    selectedChordIds.value.has(chord.id)
+  );
+  clipboard.value = chordsToCopy.map((c) => ({ ...c }));
+}
+
+function pasteChords() {
+  if (clipboard.value.length === 0) return;
+
+  const newChords = clipboard.value.map((chord) => ({
+    ...chord,
+    id: Date.now() + Math.random(),
+  }));
+
+  const currentProgression = [...progression.value];
+  let pasteIndex = -1;
+
+  if (selectedChordIds.value.size > 0) {
+    const indices = progression.value
+      .map((c, i) => (selectedChordIds.value.has(c.id) ? i : -1))
+      .filter((i) => i !== -1);
+    if (indices.length > 0) {
+      pasteIndex = Math.max(...indices);
+    }
+  }
+
+  if (pasteIndex !== -1) {
+    currentProgression.splice(pasteIndex + 1, 0, ...newChords);
+  } else {
+    currentProgression.push(...newChords);
+  }
+
+  progression.value = currentProgression;
+
+  selectedChordIds.value.clear();
+  newChords.forEach((c) => selectedChordIds.value.add(c.id));
+}
+
+function handleKeyDown(event) {
+  const activeElementTag = document.activeElement?.tagName;
+  if (activeElementTag === "INPUT" || activeElementTag === "TEXTAREA") {
+    return;
+  }
+
+  const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+
+  if (isCtrlOrCmd && event.key.toLowerCase() === "c") {
+    event.preventDefault();
+    copySelectedChords();
+  }
+
+  if (isCtrlOrCmd && event.key.toLowerCase() === "v") {
+    event.preventDefault();
+    pasteChords();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeyDown);
+});
 </script>
 
 <style scoped>
@@ -526,6 +639,7 @@ function cancelQuickImport() {
   background-color: #252525;
   border: 1px solid #444;
   border-radius: 8px;
+  cursor: pointer;
 }
 
 .chords-track {
@@ -534,6 +648,7 @@ function cancelQuickImport() {
   grid-auto-rows: minmax(100px, auto);
   align-items: stretch;
   min-height: 110px;
+  cursor: default;
 }
 
 .draggable-container {
@@ -544,6 +659,14 @@ function cancelQuickImport() {
   height: 100%;
   display: flex;
   align-items: center;
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+
+.chord-wrapper.is-selected {
+  box-shadow: 0 0 0 3px #0095ff;
 }
 
 .is-playing-halo .chord-slot {
