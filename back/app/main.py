@@ -40,7 +40,7 @@ def get_all_substitutions(request: ProgressionRequest):
     try:
         # Find tonic with IA
         tonic, mode, explanations = detect_tonic_and_mode(progression, model)
-        # tonic, mode, explanations = "C", "Harmonic Minor", "blabla"  # Mocked for testing
+        # tonic, mode, explanations = "C", "Aeolian", "blabla"  # Mocked for testing
         detected_tonic_index: int = get_note_index(tonic)
 
         # Find "foreign" chords from detected mode
@@ -69,6 +69,11 @@ def get_all_substitutions(request: ProgressionRequest):
                 relative_tonic_index,
                 degrees_to_borrow,
             )
+            for index, item in enumerate(new_progression):
+                chord_data = progression_data[index]
+                item["inversion"] = chord_data.inversion
+                item["duration"] = chord_data.duration
+
             substitutions[mode_name] = {
                 "borrowed_scale": f"{get_note_from_index(relative_tonic_index)} Major",
                 "substitution": new_progression,

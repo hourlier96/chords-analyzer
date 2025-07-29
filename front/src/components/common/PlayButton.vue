@@ -32,17 +32,14 @@ async function play() {
 <style scoped>
 .listen-button {
   width: 20px;
+  position: absolute;
   height: 20px;
+  left: 0px;
   border-radius: 50%;
   border: 1 px solid;
   background-color: #007bff;
-  color: white;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 5;
-  transition: background-color 0.2s;
 }
 
 .listen-button:hover {

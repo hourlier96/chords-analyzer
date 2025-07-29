@@ -238,6 +238,7 @@ const quickImportText = ref("");
 
 const selectedChordIds = ref(new Set());
 const clipboard = ref([]);
+const undoStack = ref([]);
 
 const playChordItem = async ({ item, startOffsetBeats = 0 }) => {
   if (!item) return;
@@ -327,7 +328,6 @@ function updateChord(index, newChord) {
   const newProgression = [...progression.value];
   newProgression[index] = newChord;
   progression.value = newProgression;
-  piano.play(newChord);
   selectedChordNotes.value = getNotesForChord(newChord);
 }
 
@@ -499,6 +499,23 @@ async function handleSeek(targetBeat) {
 
 // --- Copy/Paste Logic ---
 
+/**
+ * Annule la dernière action enregistrée dans la pile d'annulation.
+ */
+function undoLastAction() {
+  const lastAction = undoStack.value.pop();
+  if (!lastAction) return; // Rien à annuler
+
+  if (lastAction.type === "paste") {
+    const idsToRemove = new Set(lastAction.payload.pastedChordIds);
+    progression.value = progression.value.filter(
+      (chord) => !idsToRemove.has(chord.id)
+    );
+    // On nettoie la sélection au cas où les accords supprimés étaient sélectionnés
+    selectedChordIds.value.clear();
+  }
+}
+
 function handleChordClick(chord, event) {
   if (event.ctrlKey || event.metaKey) {
     if (selectedChordIds.value.has(chord.id)) {
@@ -529,6 +546,8 @@ function pasteChords() {
     id: Date.now() + Math.random(),
   }));
 
+  const newChordIds = newChords.map((c) => c.id);
+
   const currentProgression = [...progression.value];
   let pasteIndex = -1;
 
@@ -548,6 +567,13 @@ function pasteChords() {
   }
 
   progression.value = currentProgression;
+
+  undoStack.value.push({
+    type: "paste",
+    payload: {
+      pastedChordIds: newChordIds,
+    },
+  });
 
   selectedChordIds.value.clear();
   newChords.forEach((c) => selectedChordIds.value.add(c.id));
@@ -569,6 +595,11 @@ function handleKeyDown(event) {
   if (isCtrlOrCmd && event.key.toLowerCase() === "v") {
     event.preventDefault();
     pasteChords();
+  }
+
+  if (isCtrlOrCmd && event.key.toLowerCase() === "z") {
+    event.preventDefault();
+    undoLastAction();
   }
 }
 
@@ -663,7 +694,6 @@ onUnmounted(() => {
   transition: box-shadow 0.2s ease-in-out;
   cursor: pointer;
 }
-
 
 .chord-wrapper.is-selected {
   box-shadow: 0 0 0 3px #0095ff;

@@ -205,18 +205,18 @@ function stopResize() {
   font-size: 10px;
 }
 
-/* Style pour la poignée de redimensionnement*/
 .resize-handle {
   position: absolute;
-  right: 1px;
+  right: 0px;
   top: 0;
   bottom: 0;
-  width: 10px;
+  width: 6px;
   cursor: ew-resize;
   z-index: 5;
-  border-radius: 5px;
-  border-right: 1px solid #ffffff;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
   opacity: 0.5;
+  background-color: #c2bdbd;
   transition: opacity 0.2s;
 }
 

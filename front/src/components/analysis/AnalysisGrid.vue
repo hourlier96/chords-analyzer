@@ -29,19 +29,28 @@
           <h3 class="analysis-grid-title">{{ title }}</h3>
         </div>
 
-        <div v-if="!isSubstitution" class="legend">
-          <div class="legend-item">
-            <div class="legend-dot" style="background-color: #2ecc71"></div>
-            <span>Diatonique</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot" style="background-color: #f1c40f"></div>
-            <span>Emprunts</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-square" style="background-color: #304e75"></div>
+        <div class="legend">
+          <span v-if="!isSubstitution">
+            <div class="legend-item">
+              <div class="legend-dot" style="background-color: #2ecc71"></div>
+              <span>Diatonique</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background-color: #f1c40f"></div>
+              <span>Emprunts</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background-color: red"></div>
+              <span>Hors tonalité</span>
+            </div>
+          </span>
+          <span class="legend-item">
+            <div
+              class="legend-square"
+              style="background-color: #304e75; border: 1px solid #7f8c8d"
+            ></div>
             <span>Non substituable</span>
-          </div>
+          </span>
         </div>
       </div>
       <TimelineGrid

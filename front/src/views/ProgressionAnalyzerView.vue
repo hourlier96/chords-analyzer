@@ -169,17 +169,15 @@
             </div>
           </div>
 
-          <Transition name="grid-appear">
-            <AnalysisGrid
-              v-if="activeMode && substitutedModalProgression.length > 0"
-              :title="activeModeTitle"
-              :progression-items="substitutedModalProgression"
-              :analysis="analysisStore.lastAnalysis"
-              :piano="piano"
-              :secondary-dominants-map="secondaryDominantsMap"
-              :is-substitution="true"
-            />
-          </Transition>
+          <AnalysisGrid
+            v-if="activeMode && substitutedModalProgression.length > 0"
+            :title="activeModeTitle"
+            :progression-items="substitutedModalProgression"
+            :analysis="analysisStore.lastAnalysis"
+            :piano="piano"
+            :secondary-dominants-map="secondaryDominantsMap"
+            :is-substitution="true"
+          />
         </div>
       </div>
     </div>
@@ -261,7 +259,7 @@ const analysisError = ref(null);
 
 const selectedAiModel = ref("gemini-2.5-flash");
 
-const activeMode = ref(null);
+const activeMode = ref("Ionian");
 const analysisResults = computed(() => analysisStore.lastAnalysis.result);
 
 const modeOptions = computed(() => {
@@ -300,6 +298,9 @@ const substitutedModalProgression = computed(() => {
       is_diatonic: false,
       expected_chord_name: null,
       expected_numeral: null,
+      duration: item.duration || 1,
+      inversion: item.inversion || 0,
+      substitution_skipped: item.substitution_skipped || false,
     };
   });
 });
@@ -521,25 +522,5 @@ header {
 
 .modal-list .is-active {
   background-color: #6497cc;
-}
-
-.grid-appear-enter-active {
-  transition: all 1s ease-in-out;
-}
-
-.grid-appear-leave-active {
-  transition: all 0.5s ease-in-out;
-}
-
-.grid-appear-enter-from,
-.grid-appear-leave-to {
-  opacity: 0;
-  transform: scale(0.98) translateY(10px);
-}
-
-.grid-appear-enter-to,
-.grid-appear-leave-from {
-  opacity: 1;
-  transform: scale(1) translateY(0);
 }
 </style>

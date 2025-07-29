@@ -98,7 +98,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import { QUALITIES, NOTES } from "@/constants.js";
-import { getNotesForChord } from "@/sampler.js";
+import { piano, getNotesForChord } from "@/sampler.js";
 import { useSettingsStore } from "@/stores/settings.js";
 import { ALL_PLAYABLE_NOTES } from "@/keyboard.js";
 
@@ -216,6 +216,7 @@ function changeInversion(direction) {
 
   if (areNotesInRange) {
     emit("update:modelValue", testChord);
+    piano.play({ ...chord.value });
   } else {
     console.warn(
       `Le renversement ${newInversion} produit des notes hors de la tessiture du clavier.`
@@ -224,6 +225,7 @@ function changeInversion(direction) {
 }
 function updateChord(key, value) {
   emit("update:modelValue", { ...chord.value, [key]: value });
+  piano.play({ ...chord.value, [key]: value });
 }
 function getNoteValue(note) {
   return note.split(" / ")[0];
@@ -293,8 +295,9 @@ function stopResize() {
 .remove-button {
   position: absolute;
   top: 0px;
-  width: 15px;
-  height: 15px;
+  left: 0px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: none;
   background-color: #ff4d4d;
@@ -324,15 +327,16 @@ function stopResize() {
 
 .resize-handle {
   position: absolute;
-  right: 1px;
+  right: 0px;
   top: 0;
   bottom: 0;
-  width: 10px;
+  width: 6px;
   cursor: ew-resize;
   z-index: 5;
-  border-radius: 5px;
-  border-right: 1px solid #ffffff;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
   opacity: 0.5;
+  background-color: #c2bdbd;
   transition: opacity 0.2s;
 }
 

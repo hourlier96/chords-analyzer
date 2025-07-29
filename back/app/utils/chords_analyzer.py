@@ -114,6 +114,7 @@ def analyze_chord_in_context(
     else:
         # Sinon (fondamentale chromatique), on utilise le mapping chromatique (bII, #IV...)
         base_numeral = CHROMATIC_DEGREES_MAP.get(interval)
+        substitution_skipped = True
 
     if not base_numeral:
         return {
