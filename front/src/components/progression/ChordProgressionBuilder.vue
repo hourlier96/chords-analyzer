@@ -79,7 +79,11 @@
         </v-tooltip>
       </div>
 
-      <div class="progression-grid-container" @click="selectedChordIds.clear()">
+      <div
+        ref="gridContainerRef"
+        class="progression-grid-container"
+        @click="selectedChordIds.clear()"
+      >
         <TimelineGrid
           :total-beats="totalBeats"
           :beats-per-measure="beatsPerMeasure"
@@ -111,11 +115,13 @@
                 }"
                 :class="{
                   'is-playing-halo': index === currentlyPlayingIndex,
-                  'is-selected': selectedChordIds.has(chord.id),
                 }"
                 @click.stop="handleChordClick(chord, $event)"
               >
                 <ChordCard
+                  :class="{
+                    'is-selected': selectedChordIds.has(chord.id),
+                  }"
                   :modelValue="chord"
                   :beat-width="BEAT_WIDTH"
                   @update:modelValue="
@@ -204,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import draggable from "vuedraggable";
 import { mdiKeyboard, mdiCheck, mdiClose, mdiPiano } from "@mdi/js";
 
@@ -235,6 +241,8 @@ const editingChordId = ref(null);
 const selectedChordNotes = ref([]);
 const showQuickImport = ref(false);
 const quickImportText = ref("");
+
+const gridContainerRef = ref(null);
 
 const selectedChordIds = ref(new Set());
 const clipboard = ref([]);
@@ -276,6 +284,17 @@ const {
 } = useStatePlayer(progression, {
   onPlayItemAsync: playChordItem,
   piano,
+});
+
+watch(playheadPosition, (newPixelPosition) => {
+  if (!isPlaying.value || !gridContainerRef.value) return;
+  const container = gridContainerRef.value;
+  const containerWidth = container.clientWidth;
+  const targetScrollLeft = newPixelPosition - containerWidth / 2;
+  container.scrollTo({
+    left: targetScrollLeft,
+    behavior: "auto",
+  });
 });
 
 const isProgressionUnchanged = computed(() => {
@@ -481,19 +500,28 @@ function cancelQuickImport() {
   quickImportText.value = "";
 }
 
-/**
- * Gère le déplacement de la tête de lecture.
- * @param {number} targetBeat - Le temps (beat) où l'utilisateur a cliqué.
- */
+function findClosestChordStartBeat(beat) {
+  const targetChord = progression.value.find(
+    (chord) =>
+      beat + 1 >= chord.start && beat + 1 < chord.start + chord.duration
+  );
+  if (targetChord) {
+    return targetChord.start - 1;
+  }
+  return beat;
+}
+
 async function handleSeek(targetBeat) {
+  const snappedBeat = findClosestChordStartBeat(targetBeat);
+
   const wasPlaying = isPlaying.value;
 
   if (wasPlaying) {
     await stopSound();
-    seek(targetBeat);
-    playEntireProgression();
+    seek(snappedBeat); // On se positionne au début de l'accord
+    playEntireProgression(); // La lecture reprendra de ce point
   } else {
-    seek(targetBeat);
+    seek(snappedBeat); // On positionne aussi la tête de lecture quand la lecture est en pause
   }
 }
 
@@ -695,8 +723,9 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.chord-wrapper.is-selected {
+.is-selected {
   box-shadow: 0 0 0 3px #0095ff;
+  border-radius: 10px;
 }
 
 .is-playing-halo .chord-slot {

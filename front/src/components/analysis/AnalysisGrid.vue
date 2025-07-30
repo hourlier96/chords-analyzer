@@ -15,7 +15,7 @@
       </div>
     </div>
 
-    <div class="progression-grid-container">
+    <div ref="gridContainerRef" class="progression-grid-container">
       <div class="substitution-header">
         <div v-if="!isSubstitution" class="mode-selector-wrapper with-icon">
           <select v-model="selectedMode" class="mode-selector">
@@ -52,6 +52,7 @@
         :beat-width="BEAT_WIDTH"
         :is-playing="isPlaying"
         :playhead-position="playheadPosition"
+        @seek="handleSeek"
       />
       <div
         class="segments-track"
@@ -158,6 +159,7 @@ const selectedMode = ref(null); // Pour le choix global
 const segmentModes = ref({}); // Pour les choix locaux par segment
 const showSecondaryDominants = ref(false);
 const progressionState = ref([]);
+const gridContainerRef = ref(null);
 
 watch(
   () => props.progressionItems,
@@ -310,8 +312,46 @@ const {
   isLooping,
   playEntireProgression,
   stopSound,
+  seek,
 } = useStatePlayer(displayedProgression, {
   onPlayItemAsync: handlePlayItemAnalysis,
+});
+
+function findClosestChordStartBeat(beat) {
+  const progression = displayedProgression.value;
+  const targetChord = progression.find(
+    (chord) =>
+      beat + 1 >= chord.start && beat + 1 < chord.start + chord.duration
+  );
+  if (targetChord) {
+    return targetChord.start - 1;
+  }
+  return beat;
+}
+
+async function handleSeek(targetBeat) {
+  const snappedBeat = findClosestChordStartBeat(targetBeat);
+
+  const wasPlaying = isPlaying.value;
+
+  if (wasPlaying) {
+    await stopSound();
+    seek(snappedBeat); // On se positionne au début de l'accord
+    playEntireProgression(); // La lecture reprendra de ce point
+  } else {
+    seek(snappedBeat); // On positionne aussi la tête de lecture quand la lecture est en pause
+  }
+}
+
+watch(playheadPosition, (newPixelPosition) => {
+  if (!isPlaying.value || !gridContainerRef.value) return;
+  const container = gridContainerRef.value;
+  const containerWidth = container.clientWidth;
+  const targetScrollLeft = newPixelPosition - containerWidth / 2;
+  container.scrollTo({
+    left: targetScrollLeft,
+    behavior: "auto",
+  });
 });
 </script>
 
