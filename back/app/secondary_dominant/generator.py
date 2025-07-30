@@ -1,4 +1,5 @@
 from app.utils.common import (
+    format_numeral,
     get_chord_notes,
     get_note_from_index,
     get_note_index,
@@ -6,30 +7,6 @@ from app.utils.common import (
     parse_chord,
 )
 from constants import CORE_QUALITIES, MODES_DATA, ROMAN_DEGREES
-
-
-def _format_roman_numeral_from_quality(base_numeral, quality, core_qualities_map):
-    """
-    Fonction aide : met en forme un chiffrage romain (ex: 'V') et une qualité ('m7')
-    en une chaîne de caractères finale (ex: 'v7').
-    """
-    display_numeral = base_numeral
-    # Utilisation de .get() pour plus de sécurité, avec "major" comme valeur par défaut
-    core_quality = core_qualities_map.get(quality, "major")
-    if core_quality in ["minor", "diminished"]:
-        display_numeral = display_numeral.lower()
-
-    suffix_map = {
-        "maj7": "maj7",
-        "m7": "7",
-        "7": "7",
-        "m7b5": "ø7",
-        "dim7": "°7",
-        "dim": "°",
-    }
-    suffix = suffix_map.get(quality, "")
-
-    return display_numeral + suffix
 
 
 def is_chord_diatonic(chord_name, tonic_name, mode_name):
@@ -73,12 +50,8 @@ def get_roman_numeral(chord_name, tonic_index, mode_name):
     base_numeral = ROMAN_DEGREES[degree_index]
     expected_quality = mode_qualities[degree_index]
 
-    expected_numeral = _format_roman_numeral_from_quality(
-        base_numeral, expected_quality, CORE_QUALITIES
-    )
-    found_numeral = _format_roman_numeral_from_quality(
-        base_numeral, found_quality, CORE_QUALITIES
-    )
+    expected_numeral = format_numeral(base_numeral, expected_quality)
+    found_numeral = format_numeral(base_numeral, found_quality)
 
     # La logique de compatibilité est remplacée par un appel direct à is_chord_diatonic.
     tonic_name = get_note_from_index(tonic_index)

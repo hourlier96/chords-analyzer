@@ -34,6 +34,43 @@ NOTE_INDEX_MAP = {
 
 ROMAN_DEGREES = ["I", "II", "III", "IV", "V", "VI", "VII"]
 
+CHROMATIC_DEGREES_MAP = {
+    0: "I",
+    1: "bII",
+    2: "II",
+    3: "bIII",
+    4: "III",
+    5: "IV",
+    6: "#IV",
+    7: "V",
+    8: "bVI",
+    9: "VI",
+    10: "bVII",
+    11: "VII",
+}
+
+ROMAN_TO_DEGREE_MAP = {
+    # Diatoniques
+    "I": 1,
+    "II": 2,
+    "III": 3,
+    "IV": 4,
+    "V": 5,
+    "VI": 6,
+    "VII": 7,
+    # Chromatiques
+    "bII": 2,
+    "bIII": 3,
+    "bV": 5,
+    "bVI": 6,
+    "bVII": 7,
+    "#I": 1,
+    "#II": 2,
+    "#IV": 4,
+    "#V": 5,
+    "#VI": 6,
+}
+
 CORE_QUALITIES = {
     # Majeurs
     "": "major",

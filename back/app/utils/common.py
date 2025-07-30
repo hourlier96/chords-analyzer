@@ -183,6 +183,33 @@ def get_scale_notes(key_tonic_str: str, mode_name: str) -> list[str]:
     return scale_notes
 
 
+def format_numeral(base_numeral, quality):
+    core_quality = CORE_QUALITIES.get(quality, "major")
+    numeral = base_numeral.lower() if core_quality in ["minor", "diminished"] else base_numeral
+    suffix_map = {
+        "maj7": "maj7",
+        "m7": "7",
+        "7": "7",
+        "m7b5": "ø7",
+        "dim7": "°7",
+        "dim": "°",
+        "aug": "+",
+        "sus4": "sus4",
+        "sus2": "sus2",
+        "add9": "add9",
+        "m(maj7)": "m(maj7)",
+        "m6": "m6",
+        "m9": "m9",
+        "m11": "m11",
+        "m13": "m13",
+        "9": "9",
+        "11": "11",
+        "13": "13",
+    }
+    suffix = suffix_map.get(quality, "")
+    return numeral + suffix
+
+
 def get_chord_notes(chord_name: str) -> list[str] | None:
     """
     Analyse un nom d'accord et renvoie ses notes constitutives.

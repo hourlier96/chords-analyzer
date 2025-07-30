@@ -101,7 +101,11 @@ class TestGetSubstitutions:
             # Le VIe degré de Ré Majeur est Si mineur 7 (Bm7).
             {"chord": "Bm7", "roman": "vi", "quality": "m7"},
             # L'accord ignoré reprend les infos de la progression originale.
-            {"chord": "A7", "roman": None, "quality": None, "substitution_skipped": True},
+            {
+                "chord": "A7",
+                "roman": None,
+                "quality": None,
+            },
         ]
         assert result == expected
 
@@ -124,7 +128,15 @@ class TestGetSubstitutions:
         result = get_substitutions(progression, 0, sub_info)
 
         expected = [
-            {"chord": "Fm", "roman": None, "quality": None, "substitution_skipped": True},
-            {"chord": "C7", "roman": None, "quality": None, "substitution_skipped": True},
+            {
+                "chord": "Fm",
+                "roman": None,
+                "quality": None,
+            },
+            {
+                "chord": "C7",
+                "roman": None,
+                "quality": None,
+            },
         ]
         assert result == expected

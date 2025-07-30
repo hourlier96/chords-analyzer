@@ -15,7 +15,6 @@ def test_analyze_diatonic_major_triad():
         "expected_quality": "maj7",
         "expected_chord_name": "Fmaj7",
         "is_diatonic": True,
-        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -33,7 +32,6 @@ def test_analyze_diatonic_minor7_chord():
         "expected_quality": "m7",
         "expected_chord_name": "Dm7",
         "is_diatonic": True,
-        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -51,7 +49,6 @@ def test_analyze_diatonic_half_diminished_chord():
         "expected_quality": "m7b5",
         "expected_chord_name": "Bm7b5",
         "is_diatonic": True,
-        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -73,22 +70,21 @@ def test_analyze_secondary_dominant():
         "expected_quality": "m7",
         "expected_chord_name": "Dm7",
         "is_diatonic": False,  # Non diatonique car il contient un F#
-        "substitution_skipped": False,
     }
     assert result == expected
 
 
 def test_analyze_neapolitan_chord():
     result = analyze_chord_in_context("Dbmaj7", 0, "Ionian")  # Dbmaj7 en Do majeur
+
     expected = {
         "chord": "Dbmaj7",
-        "found_numeral": "bIImaj7",  # Analyse chromatique précise
-        "expected_numeral": "biimaj7",  # Pas d'équivalent direct dans le mode parallèle
+        "found_numeral": "bIImaj7",  # C'est un accord majeur (bII) avec une 7e majeure.
+        "expected_numeral": "bIImaj7",
         "found_quality": "maj7",
-        "expected_quality": "m(maj7)",
-        "expected_chord_name": "Dbm(maj7)",
+        "expected_quality": "maj7",  # La qualité attendue est maj7, comme dans le mode Phrygien.
+        "expected_chord_name": "Dbmaj7",
         "is_diatonic": False,
-        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -103,7 +99,6 @@ def test_analyze_v7_in_minor_key_borrowing_from_major():
         "expected_quality": "7",  # La qualité attendue de l'emprunt
         "expected_chord_name": "E7",
         "is_diatonic": False,  # Non diatonique à La éolien car il contient un G#
-        "substitution_skipped": False,
     }
     assert result == expected
 
@@ -112,15 +107,17 @@ def test_analyze_v7_in_minor_key_borrowing_from_major():
 
 
 def test_analyze_borrowed_chord_from_parallel_minor():
-    result = analyze_chord_in_context("D#add9", 0, "Ionian")  # D#add9 en Do majeur
+    result = analyze_chord_in_context("D#add9", 0, "Ionian")  # D#add9 (Ebadd9) en Do majeur
+
+    # L'accord bIII est un emprunt au mode mineur parallèle (Aeolian),
+    # où il est naturellement majeur (Ebmaj7). Le test doit refléter cela.
     expected = {
         "chord": "D#add9",
-        "found_numeral": "bIIIadd9",  # Chiffrage chromatique précis
-        "expected_numeral": "biii7",  # Accord attendu via emprunt (Ebmaj7 de C Aeolian)
+        "found_numeral": "bIIIadd9",
+        "expected_numeral": "bIIImaj7",
         "found_quality": "add9",
-        "expected_quality": "m7",
-        "expected_chord_name": "Ebm7",  # Nom correct avec enharmonie
-        "is_diatonic": False,  # Non diatonique
-        "substitution_skipped": False,
+        "expected_quality": "maj7",
+        "expected_chord_name": "Ebmaj7",
+        "is_diatonic": False,
     }
     assert result == expected

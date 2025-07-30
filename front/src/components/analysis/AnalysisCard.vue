@@ -7,10 +7,7 @@
       V/ → {{ secondaryDominantChord }}
     </div>
 
-    <div
-      class="card-content"
-      :class="{ substitution_skipped: item.substitution_skipped }"
-    >
+    <div class="card-content">
       <div class="chord-name">{{ item.chord }}</div>
       <div class="numeral-display">
         <span class="found-numeral" :class="getChordClass(item)">
@@ -131,12 +128,6 @@ function stopResize() {
   align-items: center;
   text-align: center;
   transition: all 0.2s;
-}
-
-.card-content.substitution_skipped {
-  background-color: #304e75;
-  color: #bdc3c7;
-  border-color: #7f8c8d;
 }
 
 .analysis-card:hover .card-content {

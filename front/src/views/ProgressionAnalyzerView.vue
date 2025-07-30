@@ -259,7 +259,7 @@ const analysisError = ref(null);
 
 const selectedAiModel = ref("gemini-2.5-flash");
 
-const activeMode = ref("Ionian");
+const activeMode = ref(null);
 const analysisResults = computed(() => analysisStore.lastAnalysis.result);
 
 const modeOptions = computed(() => {
@@ -300,7 +300,6 @@ const substitutedModalProgression = computed(() => {
       expected_numeral: null,
       duration: item.duration || 1,
       inversion: item.inversion || 0,
-      substitution_skipped: item.substitution_skipped || false,
     };
   });
 });
