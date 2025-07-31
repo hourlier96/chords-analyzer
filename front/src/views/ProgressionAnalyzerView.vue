@@ -45,7 +45,7 @@
               <v-tooltip
                 location="top"
                 :text="
-                  playbackMode === 'arpeggio'
+                  settingsStore.audioMode === 'arpeggio'
                     ? 'Passer en mode accords plaqués'
                     : 'Passer en mode arpège'
                 "
@@ -54,15 +54,17 @@
                   <button
                     v-bind="tooltipProps"
                     @click="
-                      setPlaybackMode(
-                        playbackMode === 'arpeggio' ? 'chord' : 'arpeggio'
+                      settingsStore.toggleAudioMode(
+                        settingsStore.audioMode === 'arpeggio'
+                          ? 'chord'
+                          : 'arpeggio'
                       )
                     "
                     class="control-icon-button"
                   >
                     <v-icon
                       :icon="
-                        playbackMode === 'arpeggio'
+                        settingsStore.audioMode === 'arpeggio'
                           ? mdiWaveform
                           : mdiMusicCircle
                       "
@@ -199,7 +201,7 @@ import {
 
 import { useAnalysisStore } from "@/stores/analysis.js";
 import { useSettingsStore } from "@/stores/settings.js";
-import { piano, playbackMode, setPlaybackMode } from "@/sampler.js";
+import { piano } from "@/sampler.js";
 
 import AnalysisGrid from "@/components/analysis/AnalysisGrid.vue";
 import ChordProgressionBuilder from "@/components/progression/ChordProgressionBuilder.vue";

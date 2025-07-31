@@ -18,13 +18,26 @@
     <div ref="gridContainerRef" class="progression-grid-container">
       <div class="substitution-header">
         <div v-if="!isSubstitution" class="mode-selector-wrapper with-icon">
-          <select v-model="selectedMode" class="mode-selector">
-            <option :value="null">Progression d'origine</option>
-            <option v-for="mode in availableModes" :key="mode" :value="mode">
-              {{ mode }}
-            </option>
-          </select>
-          <v-icon :icon="mdiChevronDown" class="selector-icon"></v-icon>
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <div class="mode-selector" v-bind="props">
+                <span>{{ globalModeLabel }}</span>
+                <v-icon :icon="mdiChevronDown" class="selector-icon"></v-icon>
+              </div>
+            </template>
+            <v-list dense class="mode-selection-list">
+              <v-list-item @click="selectedMode = null" class="list-item-reset">
+                <v-list-item-title>Progression d'origine</v-list-item-title>
+              </v-list-item>
+              <v-list-item
+                v-for="mode in availableModes"
+                :key="mode"
+                @click="selectedMode = mode"
+              >
+                <v-list-item-title>{{ mode }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </div>
 
         <div v-else>
@@ -172,6 +185,10 @@ watch(
   },
   { immediate: true, deep: true }
 );
+
+const globalModeLabel = computed(() => {
+  return selectedMode.value || "Progression d'origine";
+});
 
 const availableModes = computed(() =>
   Object.keys(props.analysis.result.harmonized_chords)
@@ -574,7 +591,7 @@ watch(playheadPosition, (newPixelPosition) => {
 
 .selector-icon {
   position: absolute;
-  right: 0.8rem;
+  right: 0.5rem;
   pointer-events: none;
   opacity: 0.7;
 }

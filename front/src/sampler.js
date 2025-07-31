@@ -1,11 +1,13 @@
-import { ref } from "vue";
 import * as Tone from "tone";
 import { useTempoStore } from "@/stores/tempo.js";
+import { useSettingsStore } from "@/stores/settings.js";
 import {
   NOTES_FLAT,
   ENHARMONIC_EQUIVALENTS,
   CHORD_FORMULAS,
 } from "@/constants.js";
+
+const settingsStore = useSettingsStore();
 
 const compressor = new Tone.Compressor({
   threshold: -12,
@@ -50,7 +52,12 @@ export const piano = new Tone.Sampler({
   },
   release: 1.2,
   baseUrl: "https://tonejs.github.io/audio/salamander/",
-}).chain(eq, compressor, reverb);
+}).chain(eq, compressor);
+
+compressor.connect(reverb);
+const DEFAULT_REVERB_WET = reverb.wet.value;
+// Définis une valeur de réverbération plus élevée pour l'arpège
+const ARPEGGIO_REVERB_WET = 0.8; // Tu peux ajuster cette valeur (entre 0.0 et 1.0)
 
 function noteToMidi(note) {
   const octave = parseInt(note.slice(-1));
@@ -147,6 +154,7 @@ piano.playChord = function (chord) {
   this.releaseAll();
   const notes = getNotesForChord(chord);
   if (notes.length > 0) {
+    reverb.wet.value = DEFAULT_REVERB_WET; 
     this.triggerAttack(notes);
   }
 };
@@ -162,40 +170,33 @@ piano.playArpeggio = function (chord) {
 
   if (notes.length > 0) {
     const now = Tone.now();
-    const baseVelocity = 0.6;
-    const velocityIncrement = 0.1;
+    const quarterNoteDuration = 60 / tempoStore.bpm;
 
-    const quarterNoteDuration = 60 / tempoStore.bpm; // Durée d'une noire en secondes
-    const arpeggioInterval = quarterNoteDuration / 4; // Intervalle entre chaque note (double-croche)
-    const noteDuration = quarterNoteDuration / 2; // Durée de chaque note jouée (croche)
+    const totalArpeggioOccupancyDuration = quarterNoteDuration;
+    const arpeggioTriggerInterval = notes.length > 1 
+        ? totalArpeggioOccupancyDuration / (notes.length -1)
+        : 0; 
+    const noteDuration = arpeggioTriggerInterval > 0 ? arpeggioTriggerInterval *1.20 : totalArpeggioOccupancyDuration;
 
+    const baseVelocity = 0.45;
+    const maxVelocity = 0.9;
+    reverb.wet.value = ARPEGGIO_REVERB_WET;
     notes.forEach((note, index) => {
-      const velocity = Math.min(1.0, baseVelocity + index * velocityIncrement);
+      const velocity = baseVelocity + (maxVelocity - baseVelocity) * (index / (notes.length - 1 || 1));
+      const startTime = now + index * arpeggioTriggerInterval;
 
-      const startTime = now + index * arpeggioInterval;
-      this.triggerAttackRelease(note, `${noteDuration}s`, startTime, velocity);
+      this.triggerAttackRelease(note, noteDuration, startTime, velocity);
     });
   }
 };
 
-export const playbackMode = ref("chords");
 /**
- * Sets the playback mode for the piano.
- * @param {'arpeggio' | 'chord'} mode - The desired playback mode.
- */
-export function setPlaybackMode(mode) {
-  if (mode === "arpeggio" || mode === "chord") {
-    playbackMode.value = mode;
-  }
-}
-
-/**
- * Plays a chord based on the current playbackMode.
+ * Plays a chord based on the current audioMode.
  * @param {object} chord - The chord object with { root, quality }.
  */
 
 piano.play = function (chord) {
-  if (playbackMode.value === "arpeggio") {
+  if (settingsStore.audioMode === "arpeggio") {
     piano.playArpeggio(chord);
   } else {
     piano.playChord(chord);
