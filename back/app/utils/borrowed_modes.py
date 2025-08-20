@@ -53,9 +53,7 @@ def find_possible_modes_for_chord(borrowed_chord_name: str, tonic_name: str) -> 
     return possible_modes
 
 
-def get_borrowed_chords(
-    quality_analysis: List[QualityAnalysisItem], tonic_name: str, original_mode: str
-) -> dict:
+def get_borrowed_chords(quality_analysis: List[QualityAnalysisItem], original_mode: str) -> dict:
     """
     Identifie les accords empruntés à partir d'une analyse de progression.
     """
@@ -89,6 +87,7 @@ def get_borrowed_chords(
                 continue
 
             # Pour tous les autres, on cherche d'où ils pourraient venir.
+            tonic_name = analysis_item.get("segment_context", {})["tonic"]
             possible_modes = find_possible_modes_for_chord(chord_name, tonic_name)
 
             # Filtrer pour ne garder que les modes qui ne sont pas le mode original.

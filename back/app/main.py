@@ -103,9 +103,8 @@ def get_all_substitutions(request: ProgressionRequest):
             analyzed_chord["duration"] = progression_data[i].duration
 
         detected_tonic_index: int = get_note_index(global_tonic)
-        tonic_name = get_note_from_index(detected_tonic_index)
 
-        borrowed_chords = get_borrowed_chords(quality_analysis, tonic_name, global_mode)
+        borrowed_chords = get_borrowed_chords(quality_analysis, global_mode)
         degrees_to_borrow: List[Dict[str, Any] | None] = get_substitution_info(quality_analysis)
 
         substitutions: Dict[str, Dict[str, Any]] = {}
