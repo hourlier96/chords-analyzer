@@ -5,7 +5,7 @@
     <div class="time-signature-selector">
       <v-tooltip location="top" text="Signature Rythmique">
         <template #activator="{ props: tooltipProps }">
-          <v-icon :icon="mdiTimelineClockOutline" v-bind="tooltipProps" />
+          <v-icon icon="mdi-timeline-clock-outline" v-bind="tooltipProps" />
         </template>
       </v-tooltip>
       <label
@@ -27,9 +27,7 @@
 
     <v-tooltip
       location="top"
-      :text="
-        isMetronomeActive ? 'Désactiver le métronome' : 'Activer le métronome'
-      "
+      :text="isMetronomeActive ? 'Désactiver le métronome' : 'Activer le métronome'"
     >
       <template #activator="{ props: tooltipProps }">
         <button
@@ -38,15 +36,12 @@
           class="control-icon-button"
           :class="{ 'is-active': isMetronomeActive }"
         >
-          <v-icon :icon="mdiMetronome" />
+          <v-icon icon="mdi-metronome" />
         </button>
       </template>
     </v-tooltip>
 
-    <v-tooltip
-      location="top"
-      :text="isLooping ? 'Désactiver la loop' : 'Activer la loop'"
-    >
+    <v-tooltip location="top" :text="isLooping ? 'Désactiver la loop' : 'Activer la loop'">
       <template #activator="{ props: tooltipProps }">
         <button
           v-bind="tooltipProps"
@@ -54,7 +49,7 @@
           class="control-icon-button"
           :class="{ 'is-active': isLooping }"
         >
-          <v-icon :icon="mdiSync" />
+          <v-icon icon="mdi-sync" />
         </button>
       </template>
     </v-tooltip>
@@ -68,7 +63,7 @@
             class="control-icon-button"
             :disabled="isPlaying"
           >
-            <v-icon :icon="mdiPlay" />
+            <v-icon icon="mdi-play" />
           </button>
         </template>
       </v-tooltip>
@@ -80,7 +75,7 @@
             class="control-icon-button"
             :disabled="!isPlaying"
           >
-            <v-icon :icon="mdiStop" />
+            <v-icon icon="mdi-stop" />
           </button>
         </template>
       </v-tooltip>
@@ -89,25 +84,17 @@
 </template>
 
 <script setup>
-import {
-  mdiPlay,
-  mdiStop,
-  mdiMetronome,
-  mdiSync,
-  mdiTimelineClockOutline,
-} from "@mdi/js";
-
-import TempoControl from "@/components/common/TempoControl.vue";
+import TempoControl from '@/components/common/TempoControl.vue'
 
 defineProps({
-  isPlaying: { type: Boolean, required: true },
-});
+  isPlaying: { type: Boolean, required: true }
+})
 
-defineEmits(["play", "stop"]);
+defineEmits(['play', 'stop'])
 
-const timeSignature = defineModel("timeSignature", { required: true });
-const isMetronomeActive = defineModel("isMetronomeActive", { required: true });
-const isLooping = defineModel("isLooping", { required: true });
+const timeSignature = defineModel('timeSignature', { required: true })
+const isMetronomeActive = defineModel('isMetronomeActive', { required: true })
+const isLooping = defineModel('isLooping', { required: true })
 </script>
 
 <style scoped>
@@ -170,7 +157,7 @@ const isLooping = defineModel("isLooping", { required: true });
 .radio-label-sm:not(.active):hover {
   background-color: #3f3f3f;
 }
-.radio-label-sm input[type="radio"] {
+.radio-label-sm input[type='radio'] {
   display: none;
 }
 </style>

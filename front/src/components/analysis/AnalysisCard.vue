@@ -11,17 +11,13 @@
       <div class="chord-name">{{ item.chord }}</div>
       <div class="numeral-display">
         <span class="found-numeral" :class="getChordClass(item)">
-          {{ item.found_numeral ? item.found_numeral : " " }}
+          {{ item.found_numeral ? item.found_numeral : ' ' }}
         </span>
-        <v-tooltip
-          v-if="borrowedInfo && !isSubstitution"
-          location="right"
-          max-width="300px"
-        >
+        <v-tooltip v-if="borrowedInfo && !isSubstitution" location="right" max-width="300px">
           <template #activator="{ props: tooltipProps }">
             <v-icon
               v-bind="tooltipProps"
-              :icon="mdiInformation"
+              icon="mdi-information"
               size="x-small"
               class="info-icon"
             ></v-icon>
@@ -41,8 +37,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import { mdiInformation } from "@mdi/js";
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -51,59 +46,59 @@ const props = defineProps({
   showSecondaryDominant: { type: Boolean, required: true },
   secondaryDominantChord: { type: String, default: null },
   isSubstitution: { type: Boolean, default: false },
-  beatWidth: { type: Number, required: true },
-});
+  beatWidth: { type: Number, required: true }
+})
 
-const emit = defineEmits(["update:item"]);
+const emit = defineEmits(['update:item'])
 
-const initialMouseX = ref(0);
-const initialDuration = ref(0);
+const initialMouseX = ref(0)
+const initialDuration = ref(0)
 
 const borrowedInfo = computed(() => {
-  return props.analysis.result.borrowed_chords?.[props.item.chord];
-});
+  return props.analysis.result.borrowed_chords?.[props.item.chord]
+})
 
 function getChordClass(item) {
-  const isBorrowed = !item.is_diatonic && borrowedInfo.value;
-  const isForeign = !item.is_diatonic && !borrowedInfo.value;
+  const isBorrowed = !item.is_diatonic && borrowedInfo.value
+  const isForeign = !item.is_diatonic && !borrowedInfo.value
   return {
     borrowed_chord: isBorrowed,
     foreign_chord: isForeign,
-    substitution_chord: props.isSubstitution,
-  };
+    substitution_chord: props.isSubstitution
+  }
 }
 
 /**
  * Démarre le processus de redimensionnement au clic sur la poignée.
  */
 function startResize(event) {
-  initialMouseX.value = event.clientX;
-  initialDuration.value = props.item.duration || 4;
+  initialMouseX.value = event.clientX
+  initialDuration.value = props.item.duration || 4
 
-  window.addEventListener("mousemove", doResize);
-  window.addEventListener("mouseup", stopResize);
+  window.addEventListener('mousemove', doResize)
+  window.addEventListener('mouseup', stopResize)
 }
 
 /**
  * Calcule et applique le redimensionnement pendant le mouvement de la souris.
  */
 function doResize(event) {
-  const deltaX = event.clientX - initialMouseX.value;
-  const durationChange = Math.round(deltaX / props.beatWidth);
-  let newDuration = initialDuration.value + durationChange;
-  newDuration = Math.max(1, newDuration);
-  emit("update:item", {
+  const deltaX = event.clientX - initialMouseX.value
+  const durationChange = Math.round(deltaX / props.beatWidth)
+  let newDuration = initialDuration.value + durationChange
+  newDuration = Math.max(1, newDuration)
+  emit('update:item', {
     ...props.item,
-    duration: newDuration,
-  });
+    duration: newDuration
+  })
 }
 
 /**
  * Termine le processus de redimensionnement et nettoie les écouteurs.
  */
 function stopResize() {
-  window.removeEventListener("mousemove", doResize);
-  window.removeEventListener("mouseup", stopResize);
+  window.removeEventListener('mousemove', doResize)
+  window.removeEventListener('mouseup', stopResize)
 }
 </script>
 
@@ -148,7 +143,7 @@ function stopResize() {
 }
 
 .found-numeral {
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Courier New', Courier, monospace;
   font-size: 1rem;
   font-weight: bold;
   color: #2ecc71;

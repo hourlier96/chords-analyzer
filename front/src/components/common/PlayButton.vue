@@ -13,19 +13,19 @@
 </template>
 
 <script setup>
-import * as Tone from "tone";
-import { piano } from "@/sampler.js";
+import * as Tone from 'tone'
+import { piano } from '@/sampler.js'
 
 const props = defineProps({
-  chord: { type: Object, required: true },
-});
+  chord: { type: Object, required: true }
+})
 
 async function play() {
-  if (Tone.getContext().state !== "running") {
-    await Tone.start();
+  if (Tone.getContext().state !== 'running') {
+    await Tone.start()
   }
 
-  piano.play(props.chord);
+  piano.play(props.chord)
 }
 </script>
 

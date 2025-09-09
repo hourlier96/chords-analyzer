@@ -22,18 +22,14 @@
             <template #activator="{ props }">
               <div class="mode-selector" v-bind="props">
                 <span>{{ globalModeLabel }}</span>
-                <v-icon :icon="mdiChevronDown" class="selector-icon"></v-icon>
+                <v-icon icon="mdi-chevron-down" class="selector-icon"></v-icon>
               </div>
             </template>
             <v-list dense class="mode-selection-list">
               <v-list-item @click="selectedMode = null" class="list-item-reset">
                 <v-list-item-title>Progression d'origine</v-list-item-title>
               </v-list-item>
-              <v-list-item
-                v-for="mode in availableModes"
-                :key="mode"
-                @click="selectedMode = mode"
-              >
+              <v-list-item v-for="mode in availableModes" :key="mode" @click="selectedMode = mode">
                 <v-list-item-title>{{ mode }}</v-list-item-title>
               </v-list-item>
             </v-list>
@@ -71,7 +67,7 @@
         class="segments-track"
         :style="{
           '--total-beats': totalBeats,
-          '--beat-width': `${BEAT_WIDTH}px`,
+          '--beat-width': `${BEAT_WIDTH}px`
         }"
       >
         <div
@@ -83,10 +79,7 @@
         >
           <v-menu activator="parent" location="bottom">
             <v-list dense class="mode-selection-list">
-              <v-list-item
-                @click="updateSegmentMode(segment.key, null)"
-                class="list-item-reset"
-              >
+              <v-list-item @click="updateSegmentMode(segment.key, null)" class="list-item-reset">
                 <v-list-item-title>Mode d'origine</v-list-item-title>
               </v-list-item>
               <v-list-item
@@ -103,11 +96,7 @@
             <template #activator="{ props }">
               <span v-bind="props" class="segment-label"
                 >{{ segment.label }}
-                <v-icon
-                  :icon="mdiChevronDown"
-                  size="x-small"
-                  class="segment-icon"
-                ></v-icon
+                <v-icon icon="mdi-chevron-down" size="x-small" class="segment-icon"></v-icon
               ></span>
             </template>
           </v-tooltip>
@@ -117,7 +106,7 @@
         class="chords-track"
         :style="{
           '--total-beats': totalBeats,
-          '--beat-width': `${BEAT_WIDTH}px`,
+          '--beat-width': `${BEAT_WIDTH}px`
         }"
       >
         <div
@@ -125,7 +114,7 @@
           :key="item.id"
           class="chord-wrapper"
           :style="{
-            gridColumn: `${item.start} / span ${item.duration}`,
+            gridColumn: `${item.start} / span ${item.duration}`
           }"
           :class="{ 'is-playing-halo': index === currentlyPlayingIndex }"
         >
@@ -146,15 +135,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch } from 'vue'
 
-import { BEAT_WIDTH, useStatePlayer } from "@/composables/useStatePlayer.js";
-import { sleep } from "@/utils.js";
-import { mdiChevronDown } from "@mdi/js";
-import { useTempoStore } from "@/stores/tempo.js";
-import AnalysisCard from "@/components/analysis/AnalysisCard.vue";
-import TimelineGrid from "@/components/common/TimelineGrid.vue";
-import PlayerControls from "@/components/common/PlayerControls.vue";
+import { BEAT_WIDTH, useStatePlayer } from '@/composables/useStatePlayer.js'
+import { sleep } from '@/utils.js'
+import { useTempoStore } from '@/stores/tempo.js'
+import AnalysisCard from '@/components/analysis/AnalysisCard.vue'
+import TimelineGrid from '@/components/common/TimelineGrid.vue'
+import PlayerControls from '@/components/common/PlayerControls.vue'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -162,17 +150,17 @@ const props = defineProps({
   analysis: { type: Object, required: true },
   piano: { type: Object, required: true },
   secondaryDominantsMap: { type: Map, required: true },
-  isSubstitution: { type: Boolean, default: false },
-});
+  isSubstitution: { type: Boolean, default: false }
+})
 
-const emit = defineEmits(["update:progressionItems"]);
+const emit = defineEmits(['update:progressionItems'])
 
-const tempoStore = useTempoStore();
-const selectedMode = ref(null); // Pour le choix global
-const segmentModes = ref({}); // Pour les choix locaux par segment
-const showSecondaryDominants = ref(false);
-const progressionState = ref([]);
-const gridContainerRef = ref(null);
+const tempoStore = useTempoStore()
+const selectedMode = ref(null) // Pour le choix global
+const segmentModes = ref({}) // Pour les choix locaux par segment
+const showSecondaryDominants = ref(false)
+const progressionState = ref([])
+const gridContainerRef = ref(null)
 
 watch(
   () => props.progressionItems,
@@ -180,73 +168,69 @@ watch(
     progressionState.value = newItems.map((item) => ({
       ...item,
       duration: item.duration || 2,
-      inversion: item.inversion || 0,
-    }));
+      inversion: item.inversion || 0
+    }))
   },
   { immediate: true, deep: true }
-);
+)
 
 const globalModeLabel = computed(() => {
-  return selectedMode.value || "Progression d'origine";
-});
+  return selectedMode.value || "Progression d'origine"
+})
 
-const availableModes = computed(() =>
-  Object.keys(props.analysis.result.harmonized_chords)
-);
+const availableModes = computed(() => Object.keys(props.analysis.result.harmonized_chords))
 
 const displayedProgression = computed(() => {
   const baseProgression = progressionState.value.map((item, index) => {
-    if (!item.segment_context) return item;
+    if (!item.segment_context) return item
 
-    const segmentKey = item.segment_context.explanation;
+    const segmentKey = item.segment_context.explanation
 
-    const substitutionMode =
-      segmentModes.value[segmentKey] || selectedMode.value;
+    const substitutionMode = segmentModes.value[segmentKey] || selectedMode.value
 
     if (substitutionMode) {
-      const newModeChords =
-        props.analysis.result.harmonized_chords[substitutionMode];
-      const newChordData = newModeChords ? newModeChords[index] : null;
+      const newModeChords = props.analysis.result.harmonized_chords[substitutionMode]
+      const newChordData = newModeChords ? newModeChords[index] : null
 
       if (newChordData) {
         return {
           ...item,
-          ...newChordData,
-        };
+          ...newChordData
+        }
       }
     }
-    return item;
-  });
+    return item
+  })
 
-  let currentBeat = 1;
+  let currentBeat = 1
   return baseProgression.map((chord) => {
-    const start = currentBeat;
-    currentBeat += chord.duration;
-    return { ...chord, start };
-  });
-});
+    const start = currentBeat
+    currentBeat += chord.duration
+    return { ...chord, start }
+  })
+})
 
 const harmonicSegments = computed(() => {
-  const progression = displayedProgression.value;
+  const progression = displayedProgression.value
   if (!progression || progression.length === 0) {
-    return [];
+    return []
   }
-  const segments = [];
-  let currentSegment = null;
+  const segments = []
+  let currentSegment = null
   progression.forEach((item) => {
-    if (!item.segment_context) return;
-    const segmentKey = item.segment_context.explanation;
+    if (!item.segment_context) return
+    const segmentKey = item.segment_context.explanation
 
     if (currentSegment && currentSegment.key === segmentKey) {
-      currentSegment.duration += item.duration;
+      currentSegment.duration += item.duration
     } else {
-      if (currentSegment) segments.push(currentSegment);
+      if (currentSegment) segments.push(currentSegment)
 
-      const localMode = segmentModes.value[segmentKey];
-      const globalMode = selectedMode.value;
-      const originalMode = item.segment_context.mode;
+      const localMode = segmentModes.value[segmentKey]
+      const globalMode = selectedMode.value
+      const originalMode = item.segment_context.mode
 
-      const modeForLabel = localMode || globalMode || originalMode;
+      const modeForLabel = localMode || globalMode || originalMode
 
       currentSegment = {
         key: segmentKey,
@@ -254,69 +238,66 @@ const harmonicSegments = computed(() => {
         duration: item.duration,
         label: `${item.segment_context.tonic} ${modeForLabel}`,
         explanation: item.segment_context.explanation,
-        hasLocalOverride: !!localMode,
-      };
+        hasLocalOverride: !!localMode
+      }
     }
-  });
+  })
   if (currentSegment) {
-    segments.push(currentSegment);
+    segments.push(currentSegment)
   }
-  return segments;
-});
+  return segments
+})
 
 function updateSegmentMode(segmentKey, mode) {
   if (mode) {
-    segmentModes.value[segmentKey] = mode;
+    segmentModes.value[segmentKey] = mode
   } else {
-    delete segmentModes.value[segmentKey];
+    delete segmentModes.value[segmentKey]
   }
 }
 
 function updateProgressionItem(index, newItem) {
-  const newProgression = [...progressionState.value];
-  const cleanItem = { ...newItem };
-  delete cleanItem.start;
-  newProgression[index] = cleanItem;
-  progressionState.value = newProgression;
-  emit("update:progressionItems", newProgression);
+  const newProgression = [...progressionState.value]
+  const cleanItem = { ...newItem }
+  delete cleanItem.start
+  newProgression[index] = cleanItem
+  progressionState.value = newProgression
+  emit('update:progressionItems', newProgression)
 }
 
 const parseChordString = (chordStr, inversion = 0) => {
-  if (!chordStr) return null;
-  const rootMatch = chordStr.match(/^[A-G][#b]?/);
-  if (!rootMatch) return null;
-  const root = rootMatch[0];
-  const quality = chordStr.substring(root.length);
-  return { root, quality, inversion: inversion };
-};
+  if (!chordStr) return null
+  const rootMatch = chordStr.match(/^[A-G][#b]?/)
+  if (!rootMatch) return null
+  const root = rootMatch[0]
+  const quality = chordStr.substring(root.length)
+  return { root, quality, inversion: inversion }
+}
 
 const handlePlayItemAnalysis = async ({ item }) => {
-  if (!item.chord) return;
+  if (!item.chord) return
 
-  const mainChordObject = parseChordString(item.chord, item.inversion);
-  let chordDurationMs = item.duration * tempoStore.beatDurationMs;
+  const mainChordObject = parseChordString(item.chord, item.inversion)
+  let chordDurationMs = item.duration * tempoStore.beatDurationMs
 
   if (showSecondaryDominants.value) {
-    const secondary = props.secondaryDominantsMap.get(item.chord);
-    if (secondary && secondary !== "N/A") {
-      const secondaryChordObject = parseChordString(secondary);
+    const secondary = props.secondaryDominantsMap.get(item.chord)
+    if (secondary && secondary !== 'N/A') {
+      const secondaryChordObject = parseChordString(secondary)
       if (secondaryChordObject) {
-        const secondaryDurationMs = Math.min(
-          chordDurationMs,
-          tempoStore.beatDurationMs
-        );
-        props.piano.play(secondaryChordObject);
-        await sleep(secondaryDurationMs);
-        chordDurationMs -= secondaryDurationMs;
+        const secondaryDurationMs = Math.min(chordDurationMs, tempoStore.beatDurationMs)
+        props.piano.play(secondaryChordObject)
+        await sleep(secondaryDurationMs)
+        chordDurationMs -= secondaryDurationMs
       }
     }
   }
 
   if (mainChordObject && chordDurationMs > 0) {
-    props.piano.play(mainChordObject);
-    await sleep(chordDurationMs);
+    props.piano.play(mainChordObject)
+    await sleep(chordDurationMs)
   }
-};
+}
 
 const {
   playheadPosition,
@@ -329,47 +310,46 @@ const {
   isLooping,
   playEntireProgression,
   stopSound,
-  seek,
+  seek
 } = useStatePlayer(displayedProgression, {
-  onPlayItemAsync: handlePlayItemAnalysis,
-});
+  onPlayItemAsync: handlePlayItemAnalysis
+})
 
 function findClosestChordStartBeat(beat) {
-  const progression = displayedProgression.value;
+  const progression = displayedProgression.value
   const targetChord = progression.find(
-    (chord) =>
-      beat + 1 >= chord.start && beat + 1 < chord.start + chord.duration
-  );
+    (chord) => beat + 1 >= chord.start && beat + 1 < chord.start + chord.duration
+  )
   if (targetChord) {
-    return targetChord.start - 1;
+    return targetChord.start - 1
   }
-  return beat;
+  return beat
 }
 
 async function handleSeek(targetBeat) {
-  const snappedBeat = findClosestChordStartBeat(targetBeat);
+  const snappedBeat = findClosestChordStartBeat(targetBeat)
 
-  const wasPlaying = isPlaying.value;
+  const wasPlaying = isPlaying.value
 
   if (wasPlaying) {
-    await stopSound();
-    seek(snappedBeat); // On se positionne au début de l'accord
-    playEntireProgression(); // La lecture reprendra de ce point
+    await stopSound()
+    seek(snappedBeat) // On se positionne au début de l'accord
+    playEntireProgression() // La lecture reprendra de ce point
   } else {
-    seek(snappedBeat); // On positionne aussi la tête de lecture quand la lecture est en pause
+    seek(snappedBeat) // On positionne aussi la tête de lecture quand la lecture est en pause
   }
 }
 
 watch(playheadPosition, (newPixelPosition) => {
-  if (!isPlaying.value || !gridContainerRef.value) return;
-  const container = gridContainerRef.value;
-  const containerWidth = container.clientWidth;
-  const targetScrollLeft = newPixelPosition - containerWidth / 2;
+  if (!isPlaying.value || !gridContainerRef.value) return
+  const container = gridContainerRef.value
+  const containerWidth = container.clientWidth
+  const targetScrollLeft = newPixelPosition - containerWidth / 2
   container.scrollTo({
     left: targetScrollLeft,
-    behavior: "auto",
-  });
-});
+    behavior: 'auto'
+  })
+})
 </script>
 
 <style scoped>
@@ -506,7 +486,7 @@ watch(playheadPosition, (newPixelPosition) => {
 .radio-label-sm:not(.active):hover {
   background-color: #3f3f3f;
 }
-.radio-label-sm input[type="radio"] {
+.radio-label-sm input[type='radio'] {
   display: none;
 }
 

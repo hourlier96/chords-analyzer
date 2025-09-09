@@ -2,10 +2,7 @@
   <div class="piano-container">
     <div class="piano-keyboard">
       <div v-for="key in whiteKeys" :key="key.note" class="white-key-wrapper">
-        <div
-          :class="getNoteClasses(key.note, 'white')"
-          @click="playNote(key.note)"
-        ></div>
+        <div :class="getNoteClasses(key.note, 'white')" @click="playNote(key.note)"></div>
 
         <div
           v-if="key.blackKey"
@@ -18,39 +15,39 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { piano } from "@/sampler.js";
-import { whiteKeys } from "@/keyboard.js";
+import { computed } from 'vue'
+import { piano } from '@/sampler.js'
+import { whiteKeys } from '@/keyboard.js'
 
 const props = defineProps({
   activeNotes: {
     type: Array,
-    default: () => [],
-  },
-});
+    default: () => []
+  }
+})
 
 const normalizedActiveNotes = computed(() => {
-  const noteMap = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#" };
+  const noteMap = { Db: 'C#', Eb: 'D#', Gb: 'F#', Ab: 'G#', Bb: 'A#' }
   return props.activeNotes.map((note) => {
-    const octave = note.slice(-1);
-    const root = note.slice(0, -1);
-    const mappedRoot = noteMap[root] || root;
-    return mappedRoot + octave;
-  });
-});
+    const octave = note.slice(-1)
+    const root = note.slice(0, -1)
+    const mappedRoot = noteMap[root] || root
+    return mappedRoot + octave
+  })
+})
 
 function getNoteClasses(note, type) {
-  const isActive = normalizedActiveNotes.value.includes(note);
+  const isActive = normalizedActiveNotes.value.includes(note)
   return {
-    "piano-key": true,
-    white: type === "white",
-    black: type === "black",
-    active: isActive,
-  };
+    'piano-key': true,
+    white: type === 'white',
+    black: type === 'black',
+    active: isActive
+  }
 }
 
 async function playNote(note) {
-  piano.triggerAttackRelease(note, "8n");
+  piano.triggerAttackRelease(note, '8n')
 }
 </script>
 

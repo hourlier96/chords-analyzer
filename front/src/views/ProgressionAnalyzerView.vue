@@ -1,90 +1,5 @@
 <template>
   <main>
-    <div>
-      <v-dialog v-model="isSettingsOpen" max-width="500">
-        <template #activator="{ props: activatorProps }">
-          <button
-            v-bind="activatorProps"
-            class="control-icon-button"
-            aria-label="Ouvrir les paramètres"
-          >
-            <v-icon :icon="mdiCog" />
-          </button>
-        </template>
-
-        <v-card class="settings-container" width="300px">
-          <v-card-title class="text-h5"> Paramètres </v-card-title>
-          <v-card-text>
-            <div class="setting-item-modal">
-              Affichage des notes
-              <v-tooltip
-                location="top"
-                :text="
-                  settingsStore.showNotes
-                    ? 'Cacher les notes des accords'
-                    : 'Afficher les notes des accords'
-                "
-              >
-                <template #activator="{ props: tooltipProps }">
-                  <button
-                    v-bind="tooltipProps"
-                    @click="settingsStore.toggleShowNotes()"
-                    class="control-icon-button"
-                  >
-                    <v-icon
-                      :icon="
-                        settingsStore.showNotes ? mdiMusicNote : mdiMusicNoteOff
-                      "
-                    />
-                  </button>
-                </template>
-              </v-tooltip>
-            </div>
-            <div class="setting-item-modal">
-              Mode de lecture audio
-              <v-tooltip
-                location="top"
-                :text="
-                  settingsStore.audioMode === 'arpeggio'
-                    ? 'Passer en mode accords plaqués'
-                    : 'Passer en mode arpège'
-                "
-              >
-                <template #activator="{ props: tooltipProps }">
-                  <button
-                    v-bind="tooltipProps"
-                    @click="
-                      settingsStore.toggleAudioMode(
-                        settingsStore.audioMode === 'arpeggio'
-                          ? 'chord'
-                          : 'arpeggio'
-                      )
-                    "
-                    class="control-icon-button"
-                  >
-                    <v-icon
-                      :icon="
-                        settingsStore.audioMode === 'arpeggio'
-                          ? mdiWaveform
-                          : mdiMusicCircle
-                      "
-                    />
-                  </button>
-                </template>
-              </v-tooltip>
-            </div>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn
-              color="blue-darken-1"
-              text="Fermer"
-              @click="isSettingsOpen = false"
-            ></v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-    </div>
     <ChordProgressionBuilder
       v-model="progression"
       :is-loading="isLoading"
@@ -99,14 +14,10 @@
           <div class="title-and-controls">
             <h2 class="result-title">
               {{ analysisResults.tonic }}
-              {{ analysisResults.mode.replace(" (Original)", "") }}
+              {{ analysisResults.mode.replace(' (Original)', '') }}
               <v-tooltip location="right" v-if="analysisResults.explanations">
                 <template #activator="{ props }">
-                  <v-icon
-                    v-bind="props"
-                    size="x-small"
-                    :icon="mdiInformation"
-                  ></v-icon>
+                  <v-icon v-bind="props" size="x-small" icon="mdi-information"></v-icon>
                 </template>
                 <span
                   class="explanation-content"
@@ -138,7 +49,7 @@
                         class="control-icon-button"
                         :class="{ 'is-active': activeMode }"
                       >
-                        <v-icon :icon="mdiPlaylistMusic" />
+                        <v-icon icon="mdi-playlist-music" />
                       </button>
                     </template>
                     <v-list density="compact" class="modal-list">
@@ -148,9 +59,7 @@
                         @click="activeMode = option.value"
                         :class="{ 'is-active': activeMode === option.value }"
                       >
-                        <v-list-item-title>{{
-                          option.title
-                        }}</v-list-item-title>
+                        <v-list-item-title>{{ option.title }}</v-list-item-title>
                       </v-list-item>
                     </v-list>
                   </v-menu>
@@ -159,12 +68,8 @@
 
               <v-tooltip v-if="activeMode" location="top" text="Réinitialiser">
                 <template #activator="{ props }">
-                  <button
-                    v-bind="props"
-                    @click="resetActiveMode()"
-                    class="reset-mode-button"
-                  >
-                    <v-icon :icon="mdiClose" size="x-small"></v-icon>
+                  <button v-bind="props" @click="resetActiveMode()" class="reset-mode-button">
+                    <v-icon icon="mdi-close" size="x-small"></v-icon>
                   </button>
                 </template>
               </v-tooltip>
@@ -187,110 +92,92 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import {
-  mdiInformation,
-  mdiWaveform,
-  mdiMusicCircle,
-  mdiCog,
-  mdiPlaylistMusic,
-  mdiClose,
-  mdiMusicNote,
-  mdiMusicNoteOff,
-} from "@mdi/js";
+import { ref, computed } from 'vue'
 
-import { useAnalysisStore } from "@/stores/analysis.js";
-import { useSettingsStore } from "@/stores/settings.js";
-import { piano } from "@/sampler.js";
+import { useAnalysisStore } from '@/stores/analysis.js'
+import { piano } from '@/sampler.js'
 
-import AnalysisGrid from "@/components/analysis/AnalysisGrid.vue";
-import ChordProgressionBuilder from "@/components/progression/ChordProgressionBuilder.vue";
+import AnalysisGrid from '@/components/analysis/AnalysisGrid.vue'
+import ChordProgressionBuilder from '@/components/progression/ChordProgressionBuilder.vue'
 
-const analysisStore = useAnalysisStore();
-const settingsStore = useSettingsStore();
-
-const isSettingsOpen = ref(false);
+const analysisStore = useAnalysisStore()
 
 const defaultProgression = [
   {
     id: 1,
-    root: "C",
-    quality: "m",
+    root: 'C',
+    quality: 'm',
     inversion: 2,
-    duration: 2,
+    duration: 2
   },
   {
     id: 2,
-    root: "F",
-    quality: "m",
+    root: 'F',
+    quality: 'm',
     inversion: 0,
-    duration: 2,
+    duration: 2
   },
   {
     id: 3,
-    root: "D",
-    quality: "dim",
+    root: 'D',
+    quality: 'dim',
     inversion: 2,
-    duration: 2,
+    duration: 2
   },
   {
     id: 4,
-    root: "G",
-    quality: "aug",
+    root: 'G',
+    quality: 'aug',
     inversion: 0,
-    duration: 1,
+    duration: 1
   },
   {
     id: 5,
-    root: "G",
-    quality: "",
+    root: 'G',
+    quality: '',
     inversion: 1,
-    duration: 1,
-  },
-];
+    duration: 1
+  }
+]
 
 const progression = ref(
-  analysisStore.lastAnalysis.progression &&
-    analysisStore.lastAnalysis.progression.length > 0
+  analysisStore.lastAnalysis.progression && analysisStore.lastAnalysis.progression.length > 0
     ? JSON.parse(JSON.stringify(analysisStore.lastAnalysis.progression))
     : defaultProgression
-);
+)
 
-const isLoading = ref(false);
-const analysisError = ref(null);
+const isLoading = ref(false)
+const analysisError = ref(null)
 
-const selectedAiModel = ref("gemini-2.5-flash");
+const selectedAiModel = ref('gemini-2.5-flash')
 
-const activeMode = ref(null);
-const analysisResults = computed(() => analysisStore.lastAnalysis.result);
+const activeMode = ref(null)
+const analysisResults = computed(() => analysisStore.lastAnalysis.result)
 
 const modeOptions = computed(() => {
   if (!analysisResults.value?.major_modes_substitutions) {
-    return [];
+    return []
   }
   return Object.entries(analysisResults.value.major_modes_substitutions).map(
     ([modeName, modeData]) => ({
       title: `${analysisResults.value.tonic} ${modeName}: ${modeData.borrowed_scale} scale`,
-      value: modeName,
+      value: modeName
     })
-  );
-});
+  )
+})
 
 const activeModeTitle = computed(() => {
-  if (!activeMode.value || !modeOptions.value.length) return "";
-  const selectedOption = modeOptions.value.find(
-    (opt) => opt.value === activeMode.value
-  );
-  return selectedOption ? selectedOption.title : "";
-});
+  if (!activeMode.value || !modeOptions.value.length) return ''
+  const selectedOption = modeOptions.value.find((opt) => opt.value === activeMode.value)
+  return selectedOption ? selectedOption.title : ''
+})
 
 const substitutedModalProgression = computed(() => {
-  if (!analysisResults.value) return [];
-  const modeData =
-    analysisResults.value.major_modes_substitutions?.[activeMode.value];
+  if (!analysisResults.value) return []
+  const modeData = analysisResults.value.major_modes_substitutions?.[activeMode.value]
 
   if (!modeData || !modeData.substitution) {
-    return [];
+    return []
   }
   return modeData.substitution.map((item) => {
     return {
@@ -301,63 +188,59 @@ const substitutedModalProgression = computed(() => {
       expected_chord_name: null,
       expected_numeral: null,
       duration: item.duration || 1,
-      inversion: item.inversion || 0,
-    };
-  });
-});
+      inversion: item.inversion || 0
+    }
+  })
+})
 
 const secondaryDominantsMap = computed(() => {
-  const map = new Map();
+  const map = new Map()
   if (analysisResults.value && analysisResults.value.secondary_dominants) {
-    const allModesData = Object.values(
-      analysisResults.value.secondary_dominants
-    );
+    const allModesData = Object.values(analysisResults.value.secondary_dominants)
     for (const dominantPairsForMode of allModesData) {
       for (const dominantPair of dominantPairsForMode) {
-        const [secondaryChord, targetChord] = dominantPair;
-        map.set(targetChord, secondaryChord);
+        const [secondaryChord, targetChord] = dominantPair
+        map.set(targetChord, secondaryChord)
       }
     }
   }
-  return map;
-});
+  return map
+})
 
 function resetActiveMode() {
-  activeMode.value = null;
+  activeMode.value = null
 }
 
 async function analyzeProgression() {
-  isLoading.value = true;
-  analysisError.value = null;
-  analysisStore.clearResult();
+  isLoading.value = true
+  analysisError.value = null
+  analysisStore.clearResult()
 
-  const chordsData = progression.value;
+  const chordsData = progression.value
   if (chordsData.length < 2) {
-    analysisError.value =
-      "Veuillez construire une progression d'au moins 2 accords.";
-    isLoading.value = false;
-    return;
+    analysisError.value = "Veuillez construire une progression d'au moins 2 accords."
+    isLoading.value = false
+    return
   }
 
   try {
-    const response = await fetch("http://localhost:8000/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chordsData, model: selectedAiModel.value }),
-    });
-    if (!response.ok)
-      throw new Error(`Erreur du serveur: ${response.statusText}`);
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
+    const response = await fetch('http://localhost:8000/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chordsData, model: selectedAiModel.value })
+    })
+    if (!response.ok) throw new Error(`Erreur du serveur: ${response.statusText}`)
+    const data = await response.json()
+    if (data.error) throw new Error(data.error)
 
-    const progressionSnapshot = JSON.parse(JSON.stringify(progression.value));
-    analysisStore.setLastAnalysis(data, progressionSnapshot);
-    analysisStore.setModel(selectedAiModel.value);
+    const progressionSnapshot = JSON.parse(JSON.stringify(progression.value))
+    analysisStore.setLastAnalysis(data, progressionSnapshot)
+    analysisStore.setModel(selectedAiModel.value)
   } catch (e) {
-    analysisError.value = `Une erreur est survenue : ${e.message}`;
-    analysisStore.clearResult();
+    analysisError.value = `Une erreur est survenue : ${e.message}`
+    analysisStore.clearResult()
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 </script>
@@ -367,9 +250,7 @@ async function analyzeProgression() {
   background-color: #242424;
   color: rgba(255, 255, 255, 0.87);
   color-scheme: light dark;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-weight: 400;
   line-height: 1.6;
 }
@@ -470,7 +351,7 @@ header {
   color: #edf2f4;
   cursor: pointer;
   display: flex;
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Courier New', Courier, monospace;
   font-size: 1rem;
   font-weight: bold;
   height: 40px;
