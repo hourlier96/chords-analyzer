@@ -26,7 +26,7 @@ class QualityAnalysisItem(TypedDict):
     found_quality: Optional[str]
     expected_quality: Optional[str]
     expected_chord_name: Optional[str]
-    segment_context: NotRequired[Dict[str, Any]]  # Ajouté ici
+    segment_context: NotRequired[Dict[str, Any]]
     is_diatonic: bool | None
     inversion: NotRequired[int]
     duration: NotRequired[int]

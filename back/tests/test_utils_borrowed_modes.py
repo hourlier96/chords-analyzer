@@ -57,16 +57,17 @@ def test_find_modes_for_invalid_chord_name():
 def test_get_borrowed_one_chord_in_major_key():
     """Identifie un accord emprunté simple (bVII) dans une tonalité majeure."""
     analysis = [
-        {"chord": "Cmaj", "is_diatonic": True},
+        {"chord": "Cmaj", "is_diatonic": True, "segment_context": {"tonic": "C", "mode": "Ionian"}},
         {
             "chord": "Bb",
             "is_diatonic": False,
             "found_quality": "",
             "found_numeral": "bVII",
+            "segment_context": {"tonic": "C", "mode": "Ionian"},
         },
-        {"chord": "Fmaj", "is_diatonic": True},
+        {"chord": "Fmaj", "is_diatonic": True, "segment_context": {"tonic": "C", "mode": "Ionian"}},
     ]
-    result = get_borrowed_chords(analysis, "C", "Ionian")
+    result = get_borrowed_chords(analysis, "Ionian")
     expected = {"Bb": ["Dorian", "Mixolydian", "Aeolian", "Mixolydian b6", "Locrian ♮2"]}
 
     if "Bb" in result:
@@ -78,36 +79,47 @@ def test_get_borrowed_one_chord_in_major_key():
 def test_get_borrowed_skips_standard_v7_in_minor():
     """Vérifie que le V7 en mode mineur est bien ignoré (altération standard)."""
     analysis = [
-        {"chord": "Amin", "is_diatonic": True},
+        {
+            "chord": "Amin",
+            "is_diatonic": True,
+            "segment_context": {"tonic": "A", "mode": "Aeolian"},
+        },
         {
             "chord": "E7",
             "is_diatonic": False,
             "found_quality": "7",
             "found_numeral": "V",
+            "segment_context": {"tonic": "A", "mode": "Aeolian"},
         },
     ]
-    result = get_borrowed_chords(analysis, "A", "Aeolian")
+    result = get_borrowed_chords(analysis, "Aeolian")
     assert result == {}
 
 
 def test_get_borrowed_finds_other_chord_in_minor():
     """Vérifie qu'un vrai emprunt en mode mineur est identifié."""
     analysis = [
-        {"chord": "Amin", "is_diatonic": True},
+        {
+            "chord": "Amin",
+            "is_diatonic": True,
+            "segment_context": {"tonic": "A", "mode": "Aeolian"},
+        },
         {
             "chord": "B",
             "is_diatonic": False,
             "found_quality": "",
             "found_numeral": "II",
+            "segment_context": {"tonic": "A", "mode": "Aeolian"},
         },
         {
             "chord": "E7",
             "is_diatonic": False,
             "found_quality": "7",
             "found_numeral": "V",
+            "segment_context": {"tonic": "A", "mode": "Aeolian"},
         },
     ]
-    result = get_borrowed_chords(analysis, "A", "Aeolian")
+    result = get_borrowed_chords(analysis, "Aeolian")
     expected = {"B": ["Dorian #4", "Lydian", "Lydian #5", "Lydian Dominant"]}
 
     if "B" in result:
@@ -119,15 +131,16 @@ def test_get_borrowed_finds_other_chord_in_minor():
 def test_get_borrowed_filters_original_mode_from_results():
     """Teste que le mode d'origine est bien retiré de la liste."""
     analysis = [
-        {"chord": "Cmin", "is_diatonic": True},
+        {"chord": "Cmin", "is_diatonic": True, "segment_context": {"tonic": "C", "mode": "Dorian"}},
         {
             "chord": "Gmin",
             "is_diatonic": False,
             "found_quality": "m",
             "found_numeral": "v",
+            "segment_context": {"tonic": "C", "mode": "Dorian"},
         },
     ]
-    result = get_borrowed_chords(analysis, "C", "Dorian")
+    result = get_borrowed_chords(analysis, "Dorian")
     expected_modes = {
         "Aeolian",
         "Mixolydian",
@@ -145,8 +158,10 @@ def test_get_borrowed_with_no_borrowed_chords():
     analysis = [
         {"chord": "Gmaj", "is_diatonic": True},
         {"chord": "Fmaj", "is_diatonic": True},
+        {"chord": "Cmaj", "is_diatonic": True},
+        {"chord": "Dmin", "is_diatonic": True},
     ]
-    result = get_borrowed_chords(analysis, "G", "Mixolydian")
+    result = get_borrowed_chords(analysis, "Mixolydian")
     assert result == {}
 
 
@@ -160,23 +175,27 @@ def test_get_borrowed_chords_in_c_ionian():
         {
             "chord": "Dm9",
             "is_diatonic": False,
+            "segment_context": {"tonic": "C", "mode": "Ionian"},
         },
         # Fm9 est diatonique à plusieurs modes mineurs
         {
             "chord": "Fm9",
             "is_diatonic": False,
+            "segment_context": {"tonic": "C", "mode": "Ionian"},
         },
         # Dm7b5 est le ii de plusieurs modes mineurs
         {
             "chord": "Dm7b5",
             "is_diatonic": False,
+            "segment_context": {"tonic": "C", "mode": "Ionian"},
         },
         {
             "chord": "Cmaj7",
             "is_diatonic": True,
+            "segment_context": {"tonic": "C", "mode": "Ionian"},
         },
     ]
-    result = get_borrowed_chords(analysis, "C", "Ionian")
+    result = get_borrowed_chords(analysis, "Ionian")
 
     # Dictionnaire attendu mis à jour avec les résultats corrects de l'analyse par notes
     expected = {

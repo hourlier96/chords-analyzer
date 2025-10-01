@@ -31,8 +31,10 @@ Each folder contains its own `README.md` with installation and usage instruction
 
 ## 🚀 Getting Started
 
-To run the project locally, clone the repository and follow the setup instructions in `/back` and `/front`.
+To run the project locally, clone the repository and setup project with:
 
 ```bash
 git clone https://github.com/hourlier96/chords-analyzer.git
 cd chords-analyzer
+make install
+make run

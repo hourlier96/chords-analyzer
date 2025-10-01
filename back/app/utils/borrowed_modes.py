@@ -87,13 +87,22 @@ def get_borrowed_chords(quality_analysis: List[QualityAnalysisItem], original_mo
                 continue
 
             # Pour tous les autres, on cherche d'où ils pourraient venir.
-            tonic_name = analysis_item.get("segment_context", {})["tonic"]
-            possible_modes = find_possible_modes_for_chord(chord_name, tonic_name)
+            segment_context = analysis_item.get("segment_context", {})
+            if "tonic" in segment_context:
+                tonic_name = segment_context["tonic"]
+                possible_modes = find_possible_modes_for_chord(chord_name, tonic_name)
 
-            # Filtrer pour ne garder que les modes qui ne sont pas le mode original.
-            if possible_modes:
-                modes_str_list = [mode for mode in possible_modes if mode != original_mode]
-                if modes_str_list:
-                    borrowed_chords[chord_name] = modes_str_list
+                # Filtrer pour ne garder que les modes qui ne sont pas le mode original.
+                if possible_modes:
+                    modes_str_list = [mode for mode in possible_modes if mode != original_mode]
+                    if modes_str_list:
+                        borrowed_chords[chord_name] = modes_str_list
+            else:
+                # Si on n'a pas de contexte, on ne peut rien faire.
+                print(
+                    f"Warning: No segment context for chord {chord_name} "
+                    "cannot determine borrowed modes."
+                )
+                continue
 
     return borrowed_chords
